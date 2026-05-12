@@ -1,200 +1,107 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>2e Core - Architecture V3 (Bulletproof)</title>
+    <title>Gestural Remix Engine</title>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
-        body { margin: 0; overflow: hidden; background: #050505; color: #00ff00; font-family: monospace; }
-        #videoElement { position: absolute; opacity: 0; pointer-events: none; }
-        #ui-layer { position: absolute; top: 10px; left: 10px; z-index: 10; pointer-events: none; background: rgba(0,0,0,0.8); padding: 10px; border-left: 2px solid #00ff00;}
-        .error-text { color: #ff3333; display: none; margin-top: 5px; font-weight: bold; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: monospace; }
+        #ui { position: absolute; top: 20px; left: 20px; z-index: 10; color: #0f0; }
+        canvas#output_canvas { position: absolute; bottom: 10px; right: 10px; width: 200px; border: 1px solid #333; }
+        button { background: #0f0; color: #000; border: none; padding: 10px; cursor: pointer; font-weight: bold; }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
 </head>
 <body>
-    <div id="ui-layer">
-        <div id="telemetry">>> Booting V3 Core...</div>
-        <div id="fallback-msg" class="error-text">⚠️ WIX CORS BLOCK. GEOMETRÍA PROCEDURAL ACTIVADA PARA TESTEO.</div>
-    </div>
-    <video id="videoElement" autoplay playsinline></video>
 
-    <script type="module">
-        // Importación Nativa ES Modules (Skypack evita conflictos de dependencias)
-        import * as THREE from 'https://cdn.skypack.dev/three@0.128.0';
-        import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.128.0/examples/jsm/loaders/GLTFLoader.js';
-        import GUI from 'https://cdn.skypack.dev/lil-gui';
+<div id="ui">
+    <h1>REMIXER 2E_CORE</h1>
+    <button id="startBtn">INITIALIZE SYSTEM</button>
+    <p id="status">Status: Waiting for input...</p>
+</div>
+<video id="input_video" style="display:none"></video>
+<canvas id="output_canvas"></canvas>
 
-        const log = (msg) => document.getElementById('telemetry').innerText = ">> " + msg;
-        const triggerFallback = () => document.getElementById('fallback-msg').style.display = 'block';
+<script>
+const videoElement = document.getElementById('input_video');
+const canvasElement = document.getElementById('output_canvas');
+const canvasCtx = canvasElement.getContext('2d');
+const startBtn = document.getElementById('startBtn');
 
-        // ==========================================
-        // 1. SYSTEM OVERRIDE (GUI)
-        // ==========================================
-        const params = { rotation: true, float: true, breathe: true, distort: false, mediaPipe: false, distortionSpeed: 3.0, distortionAmount: 0.2 };
-        const gui = new GUI({ title: '2e Override Panel' });
-        gui.add(params, 'rotation').name('Rotación Lenta');
-        gui.add(params, 'float').name('Levitar (Y)');
-        gui.add(params, 'breathe').name('Respirar (Scale)');
-        gui.add(params, 'distort').name('Liquify Shader');
-        gui.add(params, 'mediaPipe').name('LIVE Face Tracking');
+// --- AUDIO ENGINE ---
+let audioCtx, source, filter, analyser;
+function initAudio() {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    filter = audioCtx.createBiquadFilter();
+    analyser = audioCtx.createAnalyser();
+    
+    const audio = new Audio();
+    audio.src = 'TU_ARCHIVO.mp3'; // <--- PON TU MP3 AQUÍ
+    audio.crossOrigin = "anonymous";
+    audio.loop = true;
+
+    source = audioCtx.createMediaElementSource(audio);
+    source.connect(filter);
+    filter.connect(analyser);
+    analyser.connect(audioCtx.destination);
+    
+    filter.type = 'lowpass';
+    filter.frequency.value = 20000;
+    audio.play();
+}
+
+// --- THREE.JS ENGINE ---
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+const geometry = new THREE.IcosahedronGeometry(1, 15);
+const material = new THREE.MeshNormalMaterial({ wireframe: true });
+const mesh = new THREE.Mesh(geometry, material);
+scene.add(mesh);
+camera.position.z = 3;
+
+// --- MEDIAPIPE LOGIC ---
+const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
+hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.7, minTrackingConfidence: 0.7 });
+
+hands.onResults((results) => {
+    canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+    if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+        const hand = results.multiHandLandmarks[0];
         
-        const shFolder = gui.addFolder('Shader Params');
-        shFolder.add(params, 'distortionSpeed', 0.1, 10.0);
-        shFolder.add(params, 'distortionAmount', 0.0, 1.0);
+        // Mapeo 1: Distancia Pulgar(4)-Índice(8) -> Filtro de Audio
+        const dist = Math.hypot(hand[4].x - hand[8].x, hand[4].y - hand[8].y);
+        if(filter) filter.frequency.setTargetAtTime(dist * 8000 + 200, audioCtx.currentTime, 0.05);
 
-        // ==========================================
-        // 2. MOTOR THREE.JS CORE
-        // ==========================================
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 100);
-        camera.position.z = 5;
-        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
+        // Mapeo 2: Posición Y de la mano -> Escala y Rotación 3D
+        const yPos = 1 - hand[0].y; 
+        mesh.scale.setScalar(yPos * 2 + 0.5);
+        mesh.rotation.y += 0.05;
+        mesh.rotation.x = hand[0].x * 5;
+    }
+});
 
-        scene.add(new THREE.AmbientLight(0xffffff, 1.2));
-        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        dirLight.position.set(0, 5, 5);
-        scene.add(dirLight);
+const cameraHandler = new Camera(videoElement, {
+    onFrame: async () => { await hands.send({image: videoElement}); },
+    width: 640, height: 480
+});
 
-        // ==========================================
-        // 3. PIPELINE DE TEXTURA Y SHADER
-        // ==========================================
-        const video = document.getElementById('videoElement');
-        const videoTexture = new THREE.VideoTexture(video);
-        videoTexture.minFilter = THREE.LinearFilter;
-        videoTexture.magFilter = THREE.LinearFilter;
+startBtn.addEventListener('click', () => {
+    initAudio();
+    cameraHandler.start();
+    startBtn.style.display = 'none';
+    document.getElementById('status').innerText = "SYSTEM ACTIVE - MOVE HANDS";
+});
 
-        const customUniforms = {
-            uTime: { value: 0 },
-            uDistortActive: { value: 0 },
-            uDistortionSpeed: { value: params.distortionSpeed },
-            uDistortionAmount: { value: params.distortionAmount }
-        };
-
-        let targetObject = new THREE.Group();
-        scene.add(targetObject);
-
-        const applyMaterial = (mesh) => {
-            mesh.material = new THREE.MeshStandardMaterial({ map: videoTexture, roughness: 0.3, metalness: 0.2 });
-            mesh.material.onBeforeCompile = (shader) => {
-                shader.uniforms.uTime = customUniforms.uTime;
-                shader.uniforms.uDistortActive = customUniforms.uDistortActive;
-                shader.uniforms.uDistortionSpeed = customUniforms.uDistortionSpeed;
-                shader.uniforms.uDistortionAmount = customUniforms.uDistortionAmount;
-                shader.vertexShader = `
-                    uniform float uTime; uniform float uDistortActive; uniform float uDistortionSpeed; uniform float uDistortionAmount;
-                    ${shader.vertexShader}
-                `.replace(
-                    `#include <begin_vertex>`,
-                    `#include <begin_vertex>
-                    if(uDistortActive > 0.5) {
-                        float wave1 = sin(position.y * 5.0 + uTime * uDistortionSpeed) * uDistortionAmount;
-                        float wave2 = cos(position.x * 5.0 + uTime * uDistortionSpeed) * uDistortionAmount;
-                        transformed += normal * (wave1 + wave2);
-                    }`
-                );
-            };
-        };
-
-        // ==========================================
-        // 4. DESPLIEGUE GEOMÉTRICO (FAILSAFE INTEGRADO)
-        // ==========================================
-        log("Haciendo fetch al GLB de Wix...");
-        const loader = new GLTFLoader();
-        
-        loader.load(
-            'https://static.wixstatic.com/3d/fe81a7_cf1ed4e58d0048efa955f39d347a9466.glb',
-            (gltf) => {
-                log("GLB Extraído con éxito. Mapeando video...");
-                const model = gltf.scene;
-                model.traverse((child) => { if (child.isMesh) applyMaterial(child); });
-                const box = new THREE.Box3().setFromObject(model);
-                model.position.sub(box.getCenter(new THREE.Vector3()));
-                targetObject.add(model);
-            },
-            undefined, // onProgress
-            (err) => {
-                // Si Wix rechaza la conexión, el sistema NO muere. Genera una forma base para testear el código.
-                console.warn("Cross-Origin Block interceptado. Inyectando modelo base.", err);
-                triggerFallback();
-                log("Fallback listo. Puedes testear Shaders y Tracking.");
-                const geo = new THREE.IcosahedronGeometry(1.5, 30); // Alto poly para que el Liquify se vea bien
-                const mesh = new THREE.Mesh(geo);
-                applyMaterial(mesh);
-                targetObject.add(mesh);
-            }
-        );
-
-        // ==========================================
-        // 5. MEDIAPIPE VOLUMETRICO
-        // ==========================================
-        let facePosition = new THREE.Vector3(0, 0, 0);
-        let faceRotation = new THREE.Euler(0, 0, 0);
-
-        const faceMesh = new FaceMesh({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}` });
-        faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
-        
-        faceMesh.onResults((res) => {
-            if (!params.mediaPipe || !res.multiFaceLandmarks || res.multiFaceLandmarks.length === 0) return;
-            const nose = res.multiFaceLandmarks[0][1];
-            const leftEye = res.multiFaceLandmarks[0][33];
-            const rightEye = res.multiFaceLandmarks[0][263];
-            
-            facePosition.set((nose.x - 0.5) * -5, -(nose.y - 0.5) * 5, nose.z * -10);
-            faceRotation.set((nose.y - 0.5) * -Math.PI, (nose.x - 0.5) * -Math.PI, Math.atan2(rightEye.y - leftEye.y, rightEye.x - leftEye.x));
-        });
-
-        // ==========================================
-        // 6. MOTOR DE HARDWARE (CÁMARA)
-        // ==========================================
-        log("Hardware Check: Solicitando Cámara...");
-        navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } })
-            .then((stream) => {
-                video.srcObject = stream;
-                video.addEventListener('loadeddata', () => {
-                    log("SISTEMA ONLINE. Modifica parámetros en el GUI.");
-                    const processFrame = async () => {
-                        if (params.mediaPipe) await faceMesh.send({ image: video });
-                        requestAnimationFrame(processFrame);
-                    };
-                    processFrame();
-                });
-            }).catch(e => {
-                log("ERROR FATAL: Cámara denegada o hardware ocupado.");
-                console.error(e);
-            });
-
-        // ==========================================
-        // 7. RENDER LOOP ACTIVO
-        // ==========================================
-        const clock = new THREE.Clock();
-        function animate() {
-            requestAnimationFrame(animate);
-            const time = clock.getElapsedTime();
-            
-            customUniforms.uTime.value = time;
-            customUniforms.uDistortActive.value = params.distort ? 1.0 : 0.0;
-            customUniforms.uDistortionSpeed.value = params.distortionSpeed;
-            customUniforms.uDistortionAmount.value = params.distortionAmount;
-
-            if (params.mediaPipe) {
-                targetObject.position.lerp(facePosition, 0.1);
-                targetObject.quaternion.slerp(new THREE.Quaternion().setFromEuler(faceRotation), 0.1);
-            } else {
-                targetObject.position.lerp(new THREE.Vector3(0, params.float ? Math.sin(time*2)*0.3 : 0, 0), 0.1);
-                if (params.rotation) targetObject.rotation.y += 0.01;
-                const scale = params.breathe ? 1 + Math.sin(time*3)*0.05 : 1;
-                targetObject.scale.lerp(new THREE.Vector3(scale, scale, scale), 0.1);
-            }
-            renderer.render(scene, camera);
-        }
-        animate();
-
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-    </script>
+function animate() {
+    requestAnimationFrame(animate);
+    renderer.render(scene, camera);
+}
+animate();
+</script>
 </body>
 </html>
