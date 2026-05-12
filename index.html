@@ -2,106 +2,541 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Gestural Remix Engine</title>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SGX | A/V Master Deck</title>
+    
+    <!-- Fuentes SGX -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    
+    <!-- Dependencias MediaPipe & Three.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: monospace; }
-        #ui { position: absolute; top: 20px; left: 20px; z-index: 10; color: #0f0; }
-        canvas#output_canvas { position: absolute; bottom: 10px; right: 10px; width: 200px; border: 1px solid #333; }
-        button { background: #0f0; color: #000; border: none; padding: 10px; cursor: pointer; font-weight: bold; }
+        /* --- BRAND GUIDELINES SPATIALGINEERS --- */
+        :root {
+            --sgx-blue: #32527B;
+            --sgx-yellow: #FDCC0D;
+            --sgx-orange: #B87333;
+            --sgx-gray: #888888;
+            --bg-color: #020203;
+            --ui-bg: rgba(5, 5, 8, 0.85);
+        }
+
+        body, html {
+            margin: 0; padding: 0; width: 100vw; height: 100vh;
+            overflow: hidden; background-color: var(--bg-color);
+            font-family: 'Rajdhani', sans-serif; color: #fff;
+            user-select: none; -webkit-user-select: none;
+        }
+
+        #canvas-container { position: absolute; inset: 0; z-index: 1; }
+
+        /* --- UI COMPACTA --- */
+        #hud {
+            position: absolute; inset: 0; pointer-events: none; z-index: 10;
+            display: flex; flex-direction: column; justify-content: space-between;
+        }
+
+        .header-nav { display: flex; justify-content: space-between; align-items: flex-start; padding: 15px; }
+        
+        .brand-logo {
+            background: var(--ui-bg); backdrop-filter: blur(10px);
+            border-left: 4px solid var(--sgx-blue); padding: 8px 15px;
+            border-radius: 0 6px 6px 0; box-shadow: 0 4px 15px rgba(0,0,0,0.8);
+        }
+        .brand-logo h1 { font-family: 'Orbitron'; font-size: clamp(1rem, 2vw, 1.2rem); margin: 0; letter-spacing: 2px; }
+        .brand-logo h2 { font-size: clamp(0.6rem, 1vw, 0.7rem); margin: 0; color: var(--sgx-yellow); letter-spacing: 3px; }
+        
+        .top-right { display: flex; gap: 10px; pointer-events: auto; }
+
+        .btn-menu {
+            background: var(--ui-bg); border: 1px solid rgba(255,255,255,0.2); color: #fff;
+            padding: 6px 12px; font-family: 'Orbitron'; font-size: 0.75rem;
+            border-radius: 6px; cursor: pointer; transition: 0.3s;
+        }
+        .btn-menu:hover { border-color: var(--sgx-yellow); color: var(--sgx-yellow); }
+
+        .cam-box {
+            width: clamp(80px, 12vw, 120px); aspect-ratio: 4/3;
+            background: #000; border: 1px solid var(--sgx-blue); border-radius: 6px;
+            position: relative; overflow: hidden; opacity: 0.65; transition: 0.3s;
+        }
+        .cam-box:hover { opacity: 1; border-color: var(--sgx-yellow); }
+        canvas#output_canvas { width: 100%; height: 100%; transform: scaleX(-1); object-fit: cover; }
+        video#input_video { display: none; }
+
+        .cursor-dot { position: absolute; width: 8px; height: 8px; border-radius: 50%; transform: translate(-50%, -50%); transition: opacity 0.1s; opacity: 0; z-index: 20;}
+        #dot-l { background: var(--sgx-orange); box-shadow: 0 0 10px var(--sgx-orange); }
+        #dot-r { background: var(--sgx-yellow); box-shadow: 0 0 10px var(--sgx-yellow); }
+        
+        #cam-status {
+            position: absolute; inset: 0; background: rgba(5,5,8,0.8); display: none;
+            flex-direction: column; align-items: center; justify-content: center;
+            font-family: 'Orbitron'; font-size: 0.65rem; color: var(--sgx-orange); text-align: center;
+        }
+
+        /* Decks Inferiores */
+        .bottom-decks {
+            display: flex; justify-content: space-between; align-items: flex-end;
+            padding: 15px; gap: 10px;
+        }
+
+        .midi-deck {
+            background: var(--ui-bg); backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.05); border-radius: 10px;
+            padding: 12px; width: clamp(180px, 25vw, 300px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.8);
+        }
+        .deck-l { border-top: 3px solid var(--sgx-orange); }
+        .deck-r { border-top: 3px solid var(--sgx-yellow); }
+
+        .deck-title { font-family: 'Orbitron'; font-size: 0.7rem; color: var(--sgx-gray); margin-bottom: 10px; display: flex; justify-content: space-between;}
+
+        .pad-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 10px; }
+        .pad {
+            padding: 6px 2px; text-align: center; border-radius: 4px; color: #666;
+            background: rgba(255,255,255,0.03); border: 1px solid transparent; transition: all 0.1s;
+        }
+        .pad-lbl { font-size: 0.65rem; font-weight: bold; font-family: 'Orbitron'; margin-bottom: 2px;}
+        .pad-sub { font-size: 0.5rem; color: var(--sgx-gray); line-height: 1;}
+        
+        .pad.active-L { background: rgba(184, 115, 51, 0.2); color: #fff; border-color: var(--sgx-orange); box-shadow: 0 0 10px rgba(184, 115, 51, 0.5) inset;}
+        .pad.active-R { background: rgba(253, 204, 13, 0.2); color: #fff; border-color: var(--sgx-yellow); box-shadow: 0 0 10px rgba(253, 204, 13, 0.5) inset;}
+        .pad.active-L .pad-sub, .pad.active-R .pad-sub { color: #fff; }
+        
+        .xy-row { display: flex; align-items: center; margin-bottom: 4px; }
+        .xy-label { width: 35px; color: var(--sgx-gray); font-family: 'Rajdhani'; font-size: 0.7rem; font-weight: bold;}
+        .xy-bar-bg { flex-grow: 1; height: 5px; background: rgba(255,255,255,0.05); border-radius: 3px; position: relative;}
+        .xy-bar-fill { height: 100%; width: 0%; transition: width 0.05s linear; border-radius: 3px;}
+        .fill-L { background: var(--sgx-orange); box-shadow: 0 0 5px var(--sgx-orange);}
+        .fill-R { background: var(--sgx-yellow); box-shadow: 0 0 5px var(--sgx-yellow);}
+
+        /* Boot Screen Modal */
+        #boot-modal {
+            position: absolute; inset: 0; background: rgba(2,2,3,0.95); z-index: 100;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: auto;
+        }
+        .boot-box { max-width: 600px; text-align: center; padding: 20px;}
+        #boot-modal h1 { font-family: 'Orbitron'; font-size: clamp(1.8rem, 4vw, 2.5rem); color: var(--sgx-yellow); margin: 0 0 5px 0;}
+        #boot-modal h3 { color: var(--sgx-blue); letter-spacing: 3px; margin: 0 0 20px 0; font-size: 0.85rem;}
+        
+        .instr-panel { background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 25px; text-align: left;}
+        .instr-panel p { margin: 6px 0; font-size: 0.8rem; color: #aaa; line-height: 1.4;}
+        .instr-panel strong { font-family: 'Orbitron'; color: #fff;}
+        .c-org { color: var(--sgx-orange); } .c-yel { color: var(--sgx-yellow); }
+
+        .btn-start {
+            background: rgba(253, 204, 13, 0.1); color: var(--sgx-yellow); border: 2px solid var(--sgx-yellow);
+            padding: 12px 30px; font-family: 'Orbitron'; font-size: 0.9rem; border-radius: 30px;
+            cursor: pointer; transition: 0.3s; letter-spacing: 1px;
+        }
+        .btn-start:hover { background: var(--sgx-yellow); color: var(--bg-color); box-shadow: 0 0 20px rgba(253, 204, 13, 0.6); transform: translateY(-2px);}
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
-<div id="ui">
-    <h1>REMIXER 2E_CORE</h1>
-    <button id="startBtn">INITIALIZE SYSTEM</button>
-    <p id="status">Status: Waiting for input...</p>
+<div id="boot-modal">
+    <div class="boot-box">
+        <h1>SGX A/V SYNTHESIZE</h1>
+        <h3>AUDIO Y VISUALES MATEMÁTICAMENTE ATADOS</h3>
+        <div class="instr-panel">
+            <p style="text-align:center; color:#fff; margin-bottom:10px;">Pellizca tus dedos para deformar la realidad:</p>
+            <p><strong class="c-org">IZQ ✋ [CH 1]</strong><br>
+                • 1: Filtro DJ ↔ Color Shift<br>
+                • 2: Sub Bass ↔ Escala del Núcleo<br>
+                • 3: Treble EQ ↔ Nube de Partículas<br>
+                • 4: Robot Voz ↔ Glitch Wireframe
+            </p>
+            <p><strong class="c-yel">DER 🤚 [CH 2]</strong><br>
+                • 1: Synth ↔ Efecto Líquido<br>
+                • 2: Eco ↔ Vértigo (Zoom)<br>
+                • 3: Gater ↔ Estroboscópico<br>
+                • 4: Scratch ↔ Time Warp (Giro)
+            </p>
+        </div>
+        <button id="initBtn" class="btn-start">CONECTAR RED NEURONAL</button>
+    </div>
 </div>
-<video id="input_video" style="display:none"></video>
-<canvas id="output_canvas"></canvas>
+
+<div id="hud" class="hidden">
+    <div class="header-nav">
+        <div class="brand-logo">
+            <h1>SPATIALGINEERS</h1>
+            <h2>A/V KINEMATICS ENGINE</h2>
+        </div>
+        <div class="top-right">
+            <button id="menuBtn" class="btn-menu">⚙ MENU</button>
+            <div class="cam-box">
+                <video id="input_video" autoplay playsinline muted></video>
+                <canvas id="output_canvas" width="160" height="120"></canvas>
+                <div id="dot-l" class="cursor-dot"></div>
+                <div id="dot-r" class="cursor-dot"></div>
+                <div id="cam-status">CAM OFFLINE<br><span style="font-size:0.55rem; color:#fff; margin-top:4px;">USA PANTALLA/RATÓN</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom-decks">
+        <div class="midi-deck deck-l">
+            <div class="deck-title"><span class="c-org">A/V MACROS</span> <span>CH 1</span></div>
+            <div class="pad-grid">
+                <div class="pad" id="l-idx"><div class="pad-lbl">FLT</div><div class="pad-sub">COLOR</div></div>
+                <div class="pad" id="l-mid"><div class="pad-lbl">BAS</div><div class="pad-sub">SCALE</div></div>
+                <div class="pad" id="l-rng"><div class="pad-lbl">TRB</div><div class="pad-sub">PARTS</div></div>
+                <div class="pad" id="l-pnk"><div class="pad-lbl">ROB</div><div class="pad-sub">GLITCH</div></div>
+            </div>
+            <div class="xy-display">
+                <div class="xy-row"><div class="xy-label">MOD X</div><div class="xy-bar-bg"><div class="xy-bar-fill fill-L" id="l-bar-x"></div></div></div>
+                <div class="xy-row"><div class="xy-label">MOD Y</div><div class="xy-bar-bg"><div class="xy-bar-fill fill-L" id="l-bar-y"></div></div></div>
+            </div>
+        </div>
+
+        <div class="midi-deck deck-r">
+            <div class="deck-title"><span class="c-yel">A/V MACROS</span> <span>CH 2</span></div>
+            <div class="pad-grid">
+                <div class="pad" id="r-idx"><div class="pad-lbl">SYN</div><div class="pad-sub">LIQUID</div></div>
+                <div class="pad" id="r-mid"><div class="pad-lbl">ECO</div><div class="pad-sub">VERTIGO</div></div>
+                <div class="pad" id="r-rng"><div class="pad-lbl">GAT</div><div class="pad-sub">STROBE</div></div>
+                <div class="pad" id="r-pnk"><div class="pad-lbl">SCR</div><div class="pad-sub">WARP</div></div>
+            </div>
+            <div class="xy-display">
+                <div class="xy-row"><div class="xy-label">MOD X</div><div class="xy-bar-bg"><div class="xy-bar-fill fill-R" id="r-bar-x"></div></div></div>
+                <div class="xy-row"><div class="xy-label">MOD Y</div><div class="xy-bar-bg"><div class="xy-bar-fill fill-R" id="r-bar-y"></div></div></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="canvas-container"></div>
 
 <script>
-const videoElement = document.getElementById('input_video');
-const canvasElement = document.getElementById('output_canvas');
-const canvasCtx = canvasElement.getContext('2d');
-const startBtn = document.getElementById('startBtn');
+// --- CORE UTILS ---
+let isOnline = false;
+const lerp = (start, end, amt) => (1 - amt) * start + amt * end;
+const mapRange = (val, inMin, inMax, outMin, outMax) => {
+    let c = Math.max(inMin, Math.min(inMax, val));
+    return outMin + ((c - inMin) / (inMax - inMin)) * (outMax - outMin);
+};
 
-// --- AUDIO ENGINE ---
-let audioCtx, source, filter, analyser;
-function initAudio() {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    filter = audioCtx.createBiquadFilter();
-    analyser = audioCtx.createAnalyser();
-    
-    const audio = new Audio();
-    audio.src = 'TU_ARCHIVO.mp3'; // <--- PON TU MP3 AQUÍ
-    audio.crossOrigin = "anonymous";
-    audio.loop = true;
+// --- STATE MANAGEMENT ---
+const state = {
+    L: { pads: { idx:false, mid:false, rng:false, pnk:false }, x: 0.5, y: 0.5, lastSeen: 0 },
+    R: { pads: { idx:false, mid:false, rng:false, pnk:false }, x: 0.5, y: 0.5, lastSeen: 0, lastX: 0.5, velX: 0 },
+    v: { 
+        cScale: 1, pScale: 1, cRotX: 0.002, cRotY: 0.003, pRot: -0.001, 
+        cBase: new THREE.Color(0x32527B), cFX: new THREE.Color(0xFDCC0D), 
+        fov: 60, z: 8, wire: true, strobe: 1, glitch: 0, liquid: 0, warp: 0 
+    }
+};
 
-    source = audioCtx.createMediaElementSource(audio);
-    source.connect(filter);
-    filter.connect(analyser);
-    analyser.connect(audioCtx.destination);
-    
-    filter.type = 'lowpass';
-    filter.frequency.value = 20000;
-    audio.play();
+// --- AUDIO/VISUAL SYNTHESIS ENGINE ---
+let actx, audioEl;
+let lpFilt, hpFilt, bassEQ, trebEQ, delay, wetGain, roboGain, roboOsc, synthOsc, synthGain, gaterGain, gaterOsc;
+let scene, camera, renderer, coreMesh, partSys;
+
+function initEngines() {
+    // AUDIO INIT
+    actx = new (window.AudioContext || window.webkitAudioContext)();
+    audioEl = new Audio(); audioEl.crossOrigin = "anonymous";
+    audioEl.src = 'https://static.wixstatic.com/mp3/fe81a7_5cd8c25c8a9841acbdb0726705d1f215.mp3';
+    audioEl.loop = true; audioEl.preservesPitch = false;
+    const src = actx.createMediaElementSource(audioEl);
+
+    // Filters & EQ
+    lpFilt = actx.createBiquadFilter(); lpFilt.type = 'lowpass'; lpFilt.frequency.value = 20000;
+    hpFilt = actx.createBiquadFilter(); hpFilt.type = 'highpass'; hpFilt.frequency.value = 10;
+    bassEQ = actx.createBiquadFilter(); bassEQ.type = 'lowshelf'; bassEQ.frequency.value = 120;
+    trebEQ = actx.createBiquadFilter(); trebEQ.type = 'highshelf'; trebEQ.frequency.value = 4000;
+
+    // Robo Ring Mod
+    roboGain = actx.createGain(); roboGain.gain.value = 1;
+    roboOsc = actx.createOscillator(); roboOsc.type = 'sine'; roboOsc.start();
+    const roboMod = actx.createGain(); roboMod.gain.value = 0;
+    roboOsc.connect(roboMod); roboMod.connect(roboGain.gain);
+
+    // Gater
+    gaterGain = actx.createGain(); gaterGain.gain.value = 1;
+    gaterOsc = actx.createOscillator(); gaterOsc.type = 'square'; gaterOsc.start();
+    const gaterMod = actx.createGain(); gaterMod.gain.value = 0;
+    gaterOsc.connect(gaterMod); gaterMod.connect(gaterGain.gain);
+
+    // Synth
+    synthOsc = actx.createOscillator(); synthOsc.type = 'sawtooth'; synthOsc.start();
+    synthGain = actx.createGain(); synthGain.gain.value = 0;
+    synthOsc.connect(synthGain); synthGain.connect(actx.destination);
+
+    // Delay
+    delay = actx.createDelay(2.0); delay.delayTime.value = 0.5;
+    const fbk = actx.createGain(); fbk.gain.value = 0.6; 
+    wetGain = actx.createGain(); wetGain.gain.value = 0;
+    delay.connect(fbk); fbk.connect(delay); delay.connect(wetGain);
+
+    // Ruteo Master
+    src.connect(bassEQ); bassEQ.connect(trebEQ); trebEQ.connect(hpFilt); hpFilt.connect(lpFilt);
+    lpFilt.connect(roboGain); roboGain.connect(gaterGain);
+    gaterGain.connect(actx.destination); // Dry
+    gaterGain.connect(delay); wetGain.connect(actx.destination); // Wet
+
+    audioEl.play().catch(e=>console.log(e));
+
+    // VISUAL INIT
+    scene = new THREE.Scene(); scene.fog = new THREE.FogExp2(0x020203, 0.04);
+    camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000); camera.position.z = 8;
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+    coreMesh = new THREE.Mesh(new THREE.IcosahedronGeometry(1.5, 2), new THREE.MeshBasicMaterial({ color: 0x32527B, wireframe: true, transparent: true, opacity: 0.85 }));
+    scene.add(coreMesh);
+
+    const pGeo = new THREE.BufferGeometry(); const pos = new Float32Array(1500 * 3);
+    for(let i=0; i<1500*3; i++) pos[i] = (Math.random() - 0.5) * 12;
+    pGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    partSys = new THREE.Points(pGeo, new THREE.PointsMaterial({ color: 0xFDCC0D, size: 0.06, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending }));
+    scene.add(partSys);
 }
 
-// --- THREE.JS ENGINE ---
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
+// EL MOTOR SINCRONIZADO A/V
+function processAVEngine() {
+    if(!actx) return;
+    const nowT = actx.currentTime;
+    const pL = state.L.pads; const pR = state.R.pads;
+    const xL = state.L.x; const yL = state.L.y;
+    const xR = state.R.x; const yR = state.R.y;
+    const v = state.v; const sm = 0.15;
 
-const geometry = new THREE.IcosahedronGeometry(1, 15);
-const material = new THREE.MeshNormalMaterial({ wireframe: true });
-const mesh = new THREE.Mesh(geometry, material);
-scene.add(mesh);
-camera.position.z = 3;
+    // --- MANO IZQUIERDA (CH 1) ---
+    // 1. FLT + COLOR (IDX)
+    if(pL.idx) {
+        if(yL < 0.5) { lpFilt.frequency.setTargetAtTime(mapRange(yL, 0, 0.5, 200, 20000), nowT, sm); hpFilt.frequency.setTargetAtTime(10, nowT, sm); } 
+        else { lpFilt.frequency.setTargetAtTime(20000, nowT, sm); hpFilt.frequency.setTargetAtTime(mapRange(yL, 0.5, 1, 10, 4000), nowT, sm); }
+        lpFilt.Q.setTargetAtTime(mapRange(xL, 0, 1, 0, 15), nowT, sm); hpFilt.Q.setTargetAtTime(mapRange(xL, 0, 1, 0, 15), nowT, sm);
+        v.cBase.setHSL(xL, 0.8, 0.5); v.cFX.setHSL(yL, 0.8, 0.5);
+    } else {
+        lpFilt.frequency.setTargetAtTime(20000, nowT, 0.3); hpFilt.frequency.setTargetAtTime(10, nowT, 0.3);
+        lpFilt.Q.setTargetAtTime(0, nowT, 0.3); hpFilt.Q.setTargetAtTime(0, nowT, 0.3);
+        v.cBase.setHex(0x32527B); v.cFX.setHex(0xFDCC0D);
+    }
 
-// --- MEDIAPIPE LOGIC ---
-const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
-hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.7, minTrackingConfidence: 0.7 });
+    // 2. BASS + CORE SCALE (MID)
+    if(pL.mid) {
+        bassEQ.gain.setTargetAtTime(mapRange(xL, 0, 1, -15, 20), nowT, sm);
+        v.cScale = mapRange(yL, 0, 1, 0.5, 2.5); // Bass infla el núcleo
+    } else {
+        bassEQ.gain.setTargetAtTime(0, nowT, 0.3); v.cScale = 1;
+    }
 
-hands.onResults((results) => {
-    canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-    if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-        const hand = results.multiHandLandmarks[0];
+    // 3. TREBLE + PARTICLES (RNG)
+    if(pL.rng) {
+        trebEQ.gain.setTargetAtTime(mapRange(xL, 0, 1, -15, 15), nowT, sm);
+        v.pScale = mapRange(yL, 0, 1, 0.5, 3.5); // Treble expande partículas
+    } else {
+        trebEQ.gain.setTargetAtTime(0, nowT, 0.3); v.pScale = 1;
+    }
+
+    // 4. ROBO-VOX + GLITCH WIREFRAME (PNK)
+    if(pL.pnk) {
+        roboOsc.frequency.setTargetAtTime(mapRange(xL, 0, 1, 20, 800), nowT, sm);
+        roboGain.gain.setTargetAtTime(1 - mapRange(yL, 0, 1, 0, 1), nowT, sm);
+        v.glitch = mapRange(yL, 0, 1, 0, 0.5);
+        v.wire = (xL > 0.5); // Activa Wireframe
+    } else {
+        roboGain.gain.setTargetAtTime(1, nowT, 0.3);
+        v.glitch = 0; v.wire = true;
+    }
+
+    // --- MANO DERECHA (CH 2) ---
+    // 1. SYNTH + LIQUID CORE (IDX)
+    if(pR.idx) {
+        synthOsc.frequency.setTargetAtTime(mapRange(xR, 0, 1, 60, 800), nowT, sm);
+        synthGain.gain.setTargetAtTime(mapRange(yR, 0, 1, 0, 0.25), nowT, sm);
+        v.liquid = mapRange(yR, 0, 1, 0, 0.8);
+    } else {
+        synthGain.gain.setTargetAtTime(0, nowT, 0.2); v.liquid = 0;
+    }
+
+    // 2. ECHO + VERTIGO CAM (MID)
+    if(pR.mid) {
+        delay.delayTime.setTargetAtTime(mapRange(xR, 0, 1, 0.1, 0.8), nowT, sm);
+        wetGain.gain.setTargetAtTime(mapRange(yR, 0, 1, 0, 0.8), nowT, sm);
+        v.fov = mapRange(yR, 0, 1, 20, 140); v.z = mapRange(yR, 0, 1, 15, 3);
+    } else {
+        wetGain.gain.setTargetAtTime(0, nowT, 0.5); v.fov = 60; v.z = 8;
+    }
+
+    // 3. GATER + STROBE (RNG)
+    if(pR.rng) {
+        let gRate = mapRange(xR, 0, 1, 2, 24);
+        gaterOsc.frequency.setTargetAtTime(gRate, nowT, sm);
+        // Modulación dura para Gater de audio
+        // Simulamos opacidad visual basada en el mismo oscilador matemático
+        v.strobe = (Math.sin(Date.now() * 0.001 * gRate * Math.PI) > 0) ? 1 : 0.2;
+    } else {
+        v.strobe = 1;
+    }
+
+    // 4. SCRATCH + TIME WARP SPIN (PNK)
+    if(pR.pnk) {
+        let delta = xR - state.R.lastX;
+        state.R.velX = lerp(state.R.velX, delta * 30, 0.2);
+        let targetRate = Math.max(0.01, Math.min(2.5, 1 + state.R.velX)); // Tape Stop / Scratch
+        if(Math.abs(audioEl.playbackRate - targetRate) > 0.05) audioEl.playbackRate = targetRate;
         
-        // Mapeo 1: Distancia Pulgar(4)-Índice(8) -> Filtro de Audio
-        const dist = Math.hypot(hand[4].x - hand[8].x, hand[4].y - hand[8].y);
-        if(filter) filter.frequency.setTargetAtTime(dist * 8000 + 200, audioCtx.currentTime, 0.05);
+        v.warp = lerp(v.warp, state.R.velX * 5, 0.1); // El mundo gira con el scratch
+    } else {
+        if(audioEl.playbackRate !== 1.0) audioEl.playbackRate = 1.0;
+        state.R.velX = 0; v.warp = lerp(v.warp, 0, 0.1);
+    }
+    state.R.lastX = xR;
 
-        // Mapeo 2: Posición Y de la mano -> Escala y Rotación 3D
-        const yPos = 1 - hand[0].y; 
-        mesh.scale.setScalar(yPos * 2 + 0.5);
-        mesh.rotation.y += 0.05;
-        mesh.rotation.x = hand[0].x * 5;
+    // --- APLICAR TRANSFORMACIONES 3D ---
+    const lSpd = 0.1;
+    let tScale = v.cScale + (Math.sin(Date.now()*0.005) * v.liquid); // Liquid Morph
+    coreMesh.scale.lerp(new THREE.Vector3(tScale, v.cScale, v.cScale + v.liquid), lSpd);
+    partSys.scale.lerp(new THREE.Vector3(v.pScale, v.pScale, v.pScale), lSpd);
+    
+    coreMesh.material.color.lerp(v.cBase, lSpd); partSys.material.color.lerp(v.cFX, lSpd);
+    coreMesh.material.wireframe = v.wire;
+    coreMesh.material.opacity = v.strobe * 0.85; partSys.material.opacity = v.strobe * 0.8;
+    
+    camera.fov = lerp(camera.fov, v.fov, lSpd); camera.position.z = lerp(camera.position.z, v.z, lSpd);
+    camera.updateProjectionMatrix();
+
+    // Glitch Position Jitter
+    if(v.glitch > 0) {
+        coreMesh.position.x = (Math.random() - 0.5) * v.glitch;
+        coreMesh.position.y = (Math.random() - 0.5) * v.glitch;
+    } else {
+        coreMesh.position.set(0,0,0);
+    }
+
+    coreMesh.rotation.y += v.cRotY + v.warp; coreMesh.rotation.x += v.cRotX;
+    partSys.rotation.y += v.pRot + (v.warp * 0.5);
+    scene.rotation.z = lerp(scene.rotation.z, v.warp * 0.5, 0.1); // Time Warp total
+}
+
+// --- MEDIAPIPE GESTURE ENGINE ---
+const videoEl = document.getElementById('input_video');
+const canvasEl = document.getElementById('output_canvas');
+const ctx = canvasEl.getContext('2d');
+const dotL = document.getElementById('dot-l'); const dotR = document.getElementById('dot-r');
+
+const hands = new Hands({ locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}` });
+hands.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.6, minTrackingConfidence: 0.6 });
+
+function getActivePinches(lm) {
+    const thumb = lm[4];
+    const fingers = [{id:'idx', tip:8}, {id:'mid', tip:12}, {id:'rng', tip:16}, {id:'pnk', tip:20}];
+    let pads = { idx:false, mid:false, rng:false, pnk:false };
+    let hasAny = false; let cx = 0.5, cy = 0.5;
+
+    fingers.forEach(f => {
+        if (Math.hypot(thumb.x - lm[f.tip].x, thumb.y - lm[f.tip].y) < 0.07) { 
+            pads[f.id] = true; hasAny = true;
+            cx = (thumb.x + lm[f.tip].x) / 2; cy = (thumb.y + lm[f.tip].y) / 2;
+        }
+    });
+    return { pads, active: hasAny, x: cx, y: cy };
+}
+
+function updateHUD() {
+    ['idx','mid','rng','pnk'].forEach(i => {
+        document.getElementById(`l-${i}`).classList.toggle('active-L', state.L.pads[i]);
+        document.getElementById(`r-${i}`).classList.toggle('active-R', state.R.pads[i]);
+    });
+    document.getElementById('l-bar-x').style.width = `${state.L.x * 100}%`; document.getElementById('l-bar-y').style.width = `${state.L.y * 100}%`;
+    document.getElementById('r-bar-x').style.width = `${state.R.x * 100}%`; document.getElementById('r-bar-y').style.width = `${state.R.y * 100}%`;
+}
+
+hands.onResults((res) => {
+    ctx.save(); ctx.clearRect(0,0, canvasEl.width, canvasEl.height);
+    ctx.drawImage(res.image, 0,0, canvasEl.width, canvasEl.height);
+
+    let fL = false, fR = false; const now = Date.now();
+
+    if (res.multiHandLandmarks && res.multiHandLandmarks.length > 0) {
+        document.getElementById('cam-status').style.display = 'none';
+        for (let i = 0; i < res.multiHandLandmarks.length; i++) {
+            const lm = res.multiHandLandmarks[i];
+            const isLeft = res.multiHandedness[i].label === 'Right'; // Espejo
+
+            drawConnectors(ctx, lm, HAND_CONNECTIONS, {color: 'rgba(255,255,255,0.2)', lineWidth: 1});
+            const data = getActivePinches(lm);
+            const nX = mapRange(1 - data.x, 0.25, 0.75, 0, 1); const nY = mapRange(data.y, 0.2, 0.8, 0, 1);
+
+            if (isLeft) {
+                fL = true; state.L.lastSeen = now; state.L.pads = data.pads;
+                if(data.active) { state.L.x = lerp(state.L.x, nX, 0.3); state.L.y = lerp(state.L.y, nY, 0.3); }
+                drawLandmarks(ctx, lm, {color: data.active ? '#B87333' : '#666', radius: data.active?3:1});
+                dotL.style.opacity = data.active ? 1 : 0; dotL.style.left = `${(1-data.x)*100}%`; dotL.style.top = `${data.y*100}%`;
+            } else {
+                fR = true; state.R.lastSeen = now; state.R.pads = data.pads;
+                if(data.active) { state.R.x = lerp(state.R.x, nX, 0.3); state.R.y = lerp(state.R.y, nY, 0.3); }
+                drawLandmarks(ctx, lm, {color: data.active ? '#FDCC0D' : '#666', radius: data.active?3:1});
+                dotR.style.opacity = data.active ? 1 : 0; dotR.style.left = `${(1-data.x)*100}%`; dotR.style.top = `${data.y*100}%`;
+            }
+        }
+    }
+    
+    if(!fL && (now - state.L.lastSeen > 200)) { state.L.pads = {idx:false, mid:false, rng:false, pnk:false}; state.L.x = lerp(state.L.x, 0.5, 0.1); state.L.y = lerp(state.L.y, 0.5, 0.1); dotL.style.opacity = 0; }
+    if(!fR && (now - state.R.lastSeen > 200)) { state.R.pads = {idx:false, mid:false, rng:false, pnk:false}; state.R.x = lerp(state.R.x, 0.5, 0.1); state.R.y = lerp(state.R.y, 0.5, 0.1); dotR.style.opacity = 0; }
+
+    updateHUD(); ctx.restore();
+});
+
+const cameraHandler = new Camera(videoEl, { onFrame: async () => { if(isOnline) await hands.send({image: videoEl}); }, width: 160, height: 120 });
+
+function enableFallback() {
+    let mDown = false;
+    const handleMove = (x, y) => {
+        if(!isOnline || Date.now() - state.R.lastSeen < 2000) return; 
+        if(mDown) {
+            state.R.pads = {idx:true, mid:true, rng:false, pnk:false}; // Activa Synth + Liquid y Filtro en fallback
+            state.R.x = lerp(state.R.x, mapRange(x/window.innerWidth, 0, 1, 0, 1), 0.4); state.R.y = lerp(state.R.y, mapRange(y/window.innerHeight, 0, 1, 0, 1), 0.4);
+            state.L.pads = {idx:true, mid:false, rng:false, pnk:false}; state.L.x = state.R.x; state.L.y = state.R.y;
+            updateHUD();
+        }
+    };
+    window.addEventListener('mousedown', () => mDown = true);
+    window.addEventListener('mouseup', () => { mDown = false; state.R.pads = {idx:false, mid:false, rng:false, pnk:false}; state.L.pads = {idx:false, mid:false, rng:false, pnk:false}; updateHUD(); });
+    window.addEventListener('mousemove', (e) => handleMove(e.clientX, e.clientY));
+    window.addEventListener('touchstart', () => mDown = true, {passive: true});
+    window.addEventListener('touchend', () => { mDown = false; state.R.pads = {idx:false, mid:false, rng:false, pnk:false}; state.L.pads = {idx:false, mid:false, rng:false, pnk:false}; updateHUD(); }, {passive: true});
+    window.addEventListener('touchmove', (e) => handleMove(e.touches[0].clientX, e.touches[0].clientY), {passive: true});
+}
+
+// --- BOOT SEQUENCE ---
+document.getElementById('initBtn').addEventListener('click', () => {
+    document.getElementById('boot-modal').classList.add('hidden'); document.getElementById('hud').classList.remove('hidden');
+    
+    if(!isOnline) {
+        initEngines(); isOnline = true; run();
+        let timeout = setTimeout(() => { if(!state.L.lastSeen) { document.getElementById('cam-status').style.display = 'flex'; enableFallback(); } }, 5000);
+        cameraHandler.start().then(() => clearTimeout(timeout)).catch(e => { document.getElementById('cam-status').style.display = 'flex'; enableFallback(); });
+        enableFallback(); 
+    } else {
+        if(actx && actx.state === 'suspended') actx.resume();
     }
 });
 
-const cameraHandler = new Camera(videoElement, {
-    onFrame: async () => { await hands.send({image: videoElement}); },
-    width: 640, height: 480
+document.getElementById('menuBtn').addEventListener('click', () => {
+    document.getElementById('boot-modal').classList.remove('hidden'); document.getElementById('hud').classList.add('hidden');
 });
 
-startBtn.addEventListener('click', () => {
-    initAudio();
-    cameraHandler.start();
-    startBtn.style.display = 'none';
-    document.getElementById('status').innerText = "SYSTEM ACTIVE - MOVE HANDS";
-});
-
-function animate() {
-    requestAnimationFrame(animate);
-    renderer.render(scene, camera);
+function run() {
+    requestAnimationFrame(run);
+    if(isOnline) processAVEngine();
+    if(renderer && scene) renderer.render(scene, camera);
 }
-animate();
+
+window.addEventListener('resize', () => {
+    if(camera) { camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); }
+});
 </script>
 </body>
 </html>
