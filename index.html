@@ -3,540 +3,707 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SGX | A/V Master Deck</title>
+    <title>SGX Guild | Terminal de Iniciado</title>
     
-    <!-- Fuentes SGX -->
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
     
-    <!-- Dependencias MediaPipe & Three.js -->
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+
+    <elevenlabs-convai agent-id="agent_01jzta15r6ex3bcpfhnzszrw17"></elevenlabs-convai>
+    <script src="https://unpkg.com/@elevenlabs/convai-widget-embed" async type="text/javascript"></script>
 
     <style>
-        /* --- BRAND GUIDELINES SPATIALGINEERS --- */
         :root {
-            --sgx-blue: #32527B;
-            --sgx-yellow: #FDCC0D;
-            --sgx-orange: #B87333;
-            --sgx-gray: #888888;
-            --bg-color: #020203;
-            --ui-bg: rgba(5, 5, 8, 0.85);
+            /* BRANDING SGX OFICIAL */
+            --sgx-yellow: #fdcc0d;
+            --sgx-blue: #32527b;
+            --sgx-grey: #888888;
+            --sgx-dark-bg: #05080f;
+            --sgx-glass: rgba(50, 82, 123, 0.25);
+            --sgx-border: rgba(253, 204, 13, 0.3);
         }
 
-        body, html {
-            margin: 0; padding: 0; width: 100vw; height: 100vh;
-            overflow: hidden; background-color: var(--bg-color);
-            font-family: 'Rajdhani', sans-serif; color: #fff;
-            user-select: none; -webkit-user-select: none;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        #canvas-container { position: absolute; inset: 0; z-index: 1; }
-
-        /* --- UI COMPACTA --- */
-        #hud {
-            position: absolute; inset: 0; pointer-events: none; z-index: 10;
-            display: flex; flex-direction: column; justify-content: space-between;
+        body {
+            background-color: var(--sgx-dark-bg);
+            color: #ffffff;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+            overscroll-behavior: none;
         }
 
-        .header-nav { display: flex; justify-content: space-between; align-items: flex-start; padding: 15px; }
+        /* --- PANTALLA DE CARGA (BOOT SEQUENCE) --- */
+        #boot-screen {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background-color: #000;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 40px;
+            font-family: 'Space Grotesk', monospace;
+            color: var(--sgx-yellow);
+        }
+
+        .log-line {
+            font-size: 1rem;
+            margin-bottom: 8px;
+            opacity: 0;
+        }
+
+        /* --- CAPA 3D --- */
+        #sgx-canvas {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: 0;
+            pointer-events: none; 
+        }
+
+        /* --- CAPA DEL JUEGO (Z-INDEX ALTO PARA CLICK) --- */
+        #minigame-layer {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: 50; 
+            pointer-events: none; /* No bloquea scroll */
+        }
+
+        .energy-sphere {
+            position: absolute;
+            width: 70px;
+            height: 70px;
+            background-image: url('https://static.wixstatic.com/media/fe81a7_5670a65700584faa86f361573ecbf1f1~mv2.png');
+            background-size: cover;
+            background-position: center;
+            border-radius: 50%;
+            pointer-events: auto; /* Las esferas SI se tocan */
+            cursor: pointer;
+            transition: transform 0.1s;
+            animation: floatUp 6s linear infinite;
+        }
+
+        .energy-sphere:active {
+            transform: scale(0.6);
+        }
+
+        @keyframes floatUp {
+            0% { transform: translateY(110vh) rotate(0deg); opacity: 0; }
+            10% { opacity: 0.9; }
+            90% { opacity: 0.9; }
+            100% { transform: translateY(-10vh) rotate(360deg); opacity: 0; }
+        }
+
+        /* --- MODAL SECRETO --- */
+        #secret-modal {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(5, 8, 15, 0.95);
+            backdrop-filter: blur(15px);
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s;
+        }
+
+        .modal-content {
+            background: var(--sgx-glass);
+            border: 2px solid var(--sgx-yellow);
+            padding: 40px 20px;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 90%;
+            width: 400px;
+            box-shadow: 0 0 40px rgba(253, 204, 13, 0.15);
+            transform: scale(0.8);
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: auto;
+        }
+
+        .modal-content h2 {
+            font-family: 'Space Grotesk', sans-serif;
+            color: var(--sgx-yellow);
+            margin-bottom: 15px;
+            font-size: 1.8rem;
+        }
+
+        .code-box {
+            background: rgba(0,0,0,0.6);
+            border: 1px dashed var(--sgx-grey);
+            padding: 15px;
+            font-family: monospace;
+            font-size: 1.5rem;
+            color: #fff;
+            letter-spacing: 2px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+
+        /* --- INTERFAZ PRINCIPAL --- */
+        #ui-layer {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            height: 100vh;
+            overflow-y: auto;
+            pointer-events: none;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 40px 20px 150px 20px;
+            pointer-events: auto; 
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+            visibility: hidden; /* Oculto hasta que cargue el boot */
+        }
+
+        .badge {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--sgx-yellow);
+            border: 1px solid var(--sgx-yellow);
+            padding: 6px 12px;
+            border-radius: 50px;
+            display: inline-block;
+            margin-bottom: 15px;
+            background: rgba(253, 204, 13, 0.1);
+        }
+
+        h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 2.8rem;
+            font-weight: 800;
+            color: #ffffff;
+            line-height: 1.1;
+            margin-bottom: 10px;
+            text-shadow: 0 4px 15px rgba(50, 82, 123, 0.8);
+        }
+
+        p.subtitle {
+            color: var(--sgx-grey);
+            font-size: 1.2rem;
+            font-weight: 400;
+        }
+
+        /* Acordeón */
+        .guild-section {
+            background: var(--sgx-glass);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--sgx-border);
+            border-radius: 12px;
+            margin-bottom: 15px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            visibility: hidden; /* Oculto para la anim inicial */
+        }
+
+        .guild-section.active {
+            border-color: var(--sgx-yellow);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 0 20px rgba(253, 204, 13, 0.05);
+        }
+
+        .section-header {
+            padding: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .section-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .section-title span {
+            color: var(--sgx-yellow);
+            font-size: 0.9rem;
+        }
+
+        .icon-cross {
+            position: relative;
+            width: 14px; height: 14px;
+        }
+
+        .icon-cross::before, .icon-cross::after {
+            content: ''; position: absolute; background-color: var(--sgx-grey);
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .icon-cross::before { top: 6px; left: 0; width: 14px; height: 2px; }
+        .icon-cross::after { top: 0; left: 6px; width: 2px; height: 14px; }
+
+        .active .icon-cross::after { transform: rotate(90deg); }
+        .active .icon-cross::before { transform: rotate(180deg); background-color: var(--sgx-yellow); }
+
+        .section-content {
+            height: 0;
+            overflow: hidden;
+            padding: 0 24px;
+            color: #d1d5db;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        .content-inner { padding-bottom: 24px; }
+
+        h3 {
+            color: var(--sgx-yellow);
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1rem;
+            margin: 20px 0 10px 0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        ul { list-style: none; margin-bottom: 15px; }
+        li { position: relative; padding-left: 15px; margin-bottom: 12px; }
+        li::before {
+            content: ''; position: absolute; left: 0; top: 8px; width: 4px; height: 4px;
+            background: var(--sgx-yellow); border-radius: 50%;
+        }
+
+        .highlight { color: #ffffff; font-weight: 600; }
         
-        .brand-logo {
-            background: var(--ui-bg); backdrop-filter: blur(10px);
-            border-left: 4px solid var(--sgx-blue); padding: 8px 15px;
-            border-radius: 0 6px 6px 0; box-shadow: 0 4px 15px rgba(0,0,0,0.8);
-        }
-        .brand-logo h1 { font-family: 'Orbitron'; font-size: clamp(1rem, 2vw, 1.2rem); margin: 0; letter-spacing: 2px; }
-        .brand-logo h2 { font-size: clamp(0.6rem, 1vw, 0.7rem); margin: 0; color: var(--sgx-yellow); letter-spacing: 3px; }
-        
-        .top-right { display: flex; gap: 10px; pointer-events: auto; }
-
-        .btn-menu {
-            background: var(--ui-bg); border: 1px solid rgba(255,255,255,0.2); color: #fff;
-            padding: 6px 12px; font-family: 'Orbitron'; font-size: 0.75rem;
-            border-radius: 6px; cursor: pointer; transition: 0.3s;
-        }
-        .btn-menu:hover { border-color: var(--sgx-yellow); color: var(--sgx-yellow); }
-
-        .cam-box {
-            width: clamp(80px, 12vw, 120px); aspect-ratio: 4/3;
-            background: #000; border: 1px solid var(--sgx-blue); border-radius: 6px;
-            position: relative; overflow: hidden; opacity: 0.65; transition: 0.3s;
-        }
-        .cam-box:hover { opacity: 1; border-color: var(--sgx-yellow); }
-        canvas#output_canvas { width: 100%; height: 100%; transform: scaleX(-1); object-fit: cover; }
-        video#input_video { display: none; }
-
-        .cursor-dot { position: absolute; width: 8px; height: 8px; border-radius: 50%; transform: translate(-50%, -50%); transition: opacity 0.1s; opacity: 0; z-index: 20;}
-        #dot-l { background: var(--sgx-orange); box-shadow: 0 0 10px var(--sgx-orange); }
-        #dot-r { background: var(--sgx-yellow); box-shadow: 0 0 10px var(--sgx-yellow); }
-        
-        #cam-status {
-            position: absolute; inset: 0; background: rgba(5,5,8,0.8); display: none;
-            flex-direction: column; align-items: center; justify-content: center;
-            font-family: 'Orbitron'; font-size: 0.65rem; color: var(--sgx-orange); text-align: center;
+        .btn-close {
+            background: var(--sgx-yellow);
+            color: var(--sgx-dark-bg);
+            border: none;
+            padding: 10px 20px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 15px;
         }
 
-        /* Decks Inferiores */
-        .bottom-decks {
-            display: flex; justify-content: space-between; align-items: flex-end;
-            padding: 15px; gap: 10px;
+        /* Score Tracker Oculto (Aparece en consola/mente) */
+        .score-tracker {
+            position: fixed; top: 20px; right: 20px;
+            font-family: 'Space Grotesk', sans-serif; color: var(--sgx-yellow);
+            font-size: 1.2rem; z-index: 60; opacity: 0; transition: opacity 0.3s;
         }
 
-        .midi-deck {
-            background: var(--ui-bg); backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,255,255,0.05); border-radius: 10px;
-            padding: 12px; width: clamp(180px, 25vw, 300px);
-            box-shadow: 0 5px 20px rgba(0,0,0,0.8);
-        }
-        .deck-l { border-top: 3px solid var(--sgx-orange); }
-        .deck-r { border-top: 3px solid var(--sgx-yellow); }
-
-        .deck-title { font-family: 'Orbitron'; font-size: 0.7rem; color: var(--sgx-gray); margin-bottom: 10px; display: flex; justify-content: space-between;}
-
-        .pad-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 10px; }
-        .pad {
-            padding: 6px 2px; text-align: center; border-radius: 4px; color: #666;
-            background: rgba(255,255,255,0.03); border: 1px solid transparent; transition: all 0.1s;
-        }
-        .pad-lbl { font-size: 0.65rem; font-weight: bold; font-family: 'Orbitron'; margin-bottom: 2px;}
-        .pad-sub { font-size: 0.5rem; color: var(--sgx-gray); line-height: 1;}
-        
-        .pad.active-L { background: rgba(184, 115, 51, 0.2); color: #fff; border-color: var(--sgx-orange); box-shadow: 0 0 10px rgba(184, 115, 51, 0.5) inset;}
-        .pad.active-R { background: rgba(253, 204, 13, 0.2); color: #fff; border-color: var(--sgx-yellow); box-shadow: 0 0 10px rgba(253, 204, 13, 0.5) inset;}
-        .pad.active-L .pad-sub, .pad.active-R .pad-sub { color: #fff; }
-        
-        .xy-row { display: flex; align-items: center; margin-bottom: 4px; }
-        .xy-label { width: 35px; color: var(--sgx-gray); font-family: 'Rajdhani'; font-size: 0.7rem; font-weight: bold;}
-        .xy-bar-bg { flex-grow: 1; height: 5px; background: rgba(255,255,255,0.05); border-radius: 3px; position: relative;}
-        .xy-bar-fill { height: 100%; width: 0%; transition: width 0.05s linear; border-radius: 3px;}
-        .fill-L { background: var(--sgx-orange); box-shadow: 0 0 5px var(--sgx-orange);}
-        .fill-R { background: var(--sgx-yellow); box-shadow: 0 0 5px var(--sgx-yellow);}
-
-        /* Boot Screen Modal */
-        #boot-modal {
-            position: absolute; inset: 0; background: rgba(2,2,3,0.95); z-index: 100;
-            display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: auto;
-        }
-        .boot-box { max-width: 600px; text-align: center; padding: 20px;}
-        #boot-modal h1 { font-family: 'Orbitron'; font-size: clamp(1.8rem, 4vw, 2.5rem); color: var(--sgx-yellow); margin: 0 0 5px 0;}
-        #boot-modal h3 { color: var(--sgx-blue); letter-spacing: 3px; margin: 0 0 20px 0; font-size: 0.85rem;}
-        
-        .instr-panel { background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 25px; text-align: left;}
-        .instr-panel p { margin: 6px 0; font-size: 0.8rem; color: #aaa; line-height: 1.4;}
-        .instr-panel strong { font-family: 'Orbitron'; color: #fff;}
-        .c-org { color: var(--sgx-orange); } .c-yel { color: var(--sgx-yellow); }
-
-        .btn-start {
-            background: rgba(253, 204, 13, 0.1); color: var(--sgx-yellow); border: 2px solid var(--sgx-yellow);
-            padding: 12px 30px; font-family: 'Orbitron'; font-size: 0.9rem; border-radius: 30px;
-            cursor: pointer; transition: 0.3s; letter-spacing: 1px;
-        }
-        .btn-start:hover { background: var(--sgx-yellow); color: var(--bg-color); box-shadow: 0 0 20px rgba(253, 204, 13, 0.6); transform: translateY(-2px);}
-        .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
-<div id="boot-modal">
-    <div class="boot-box">
-        <h1>SGX A/V SYNTHESIZE</h1>
-        <h3>AUDIO Y VISUALES MATEMÁTICAMENTE ATADOS</h3>
-        <div class="instr-panel">
-            <p style="text-align:center; color:#fff; margin-bottom:10px;">Pellizca tus dedos para deformar la realidad:</p>
-            <p><strong class="c-org">IZQ ✋ [CH 1]</strong><br>
-                • 1: Filtro DJ ↔ Color Shift<br>
-                • 2: Sub Bass ↔ Escala del Núcleo<br>
-                • 3: Treble EQ ↔ Nube de Partículas<br>
-                • 4: Robot Voz ↔ Glitch Wireframe
-            </p>
-            <p><strong class="c-yel">DER 🤚 [CH 2]</strong><br>
-                • 1: Synth ↔ Efecto Líquido<br>
-                • 2: Eco ↔ Vértigo (Zoom)<br>
-                • 3: Gater ↔ Estroboscópico<br>
-                • 4: Scratch ↔ Time Warp (Giro)
-            </p>
-        </div>
-        <button id="initBtn" class="btn-start">CONECTAR RED NEURONAL</button>
+    <div id="boot-screen">
+        <div class="log-line">SGX_OS v3.1 initializing...</div>
+        <div class="log-line">Loading Spatial Mesh...</div>
+        <div class="log-line">Connecting to Highcoon Neural Net...</div>
+        <div class="log-line" style="color: #fff;">>> SYSTEM READY</div>
     </div>
-</div>
 
-<div id="hud" class="hidden">
-    <div class="header-nav">
-        <div class="brand-logo">
-            <h1>SPATIALGINEERS</h1>
-            <h2>A/V KINEMATICS ENGINE</h2>
-        </div>
-        <div class="top-right">
-            <button id="menuBtn" class="btn-menu">⚙ MENU</button>
-            <div class="cam-box">
-                <video id="input_video" autoplay playsinline muted></video>
-                <canvas id="output_canvas" width="160" height="120"></canvas>
-                <div id="dot-l" class="cursor-dot"></div>
-                <div id="dot-r" class="cursor-dot"></div>
-                <div id="cam-status">CAM OFFLINE<br><span style="font-size:0.55rem; color:#fff; margin-top:4px;">USA PANTALLA/RATÓN</span></div>
-            </div>
+    <div id="sgx-canvas"></div>
+
+    <div class="score-tracker" id="score-display">0/10</div>
+
+    <div id="minigame-layer"></div>
+
+    <div id="secret-modal">
+        <div class="modal-content" id="modal-box">
+            <h2>¡EASTER EGG ENCONTRADO!</h2>
+            <p style="color: var(--sgx-grey);">Has recolectado 10 esferas de energía. Tu curiosidad espacial ha sido recompensada.</p>
+            <p style="margin-top: 15px;">Danos este código secreto y ganarás el derecho a una <strong style="color: #fff;">Galería Virtual (Tier 2)</strong> para exhibir tu propio modelo 3D.</p>
+            <div class="code-box">HIGHCOON-X10</div>
+            <button class="btn-close" onclick="closeModal()">ACEPTAR RECOMPENSA</button>
         </div>
     </div>
 
-    <div class="bottom-decks">
-        <div class="midi-deck deck-l">
-            <div class="deck-title"><span class="c-org">A/V MACROS</span> <span>CH 1</span></div>
-            <div class="pad-grid">
-                <div class="pad" id="l-idx"><div class="pad-lbl">FLT</div><div class="pad-sub">COLOR</div></div>
-                <div class="pad" id="l-mid"><div class="pad-lbl">BAS</div><div class="pad-sub">SCALE</div></div>
-                <div class="pad" id="l-rng"><div class="pad-lbl">TRB</div><div class="pad-sub">PARTS</div></div>
-                <div class="pad" id="l-pnk"><div class="pad-lbl">ROB</div><div class="pad-sub">GLITCH</div></div>
-            </div>
-            <div class="xy-display">
-                <div class="xy-row"><div class="xy-label">MOD X</div><div class="xy-bar-bg"><div class="xy-bar-fill fill-L" id="l-bar-x"></div></div></div>
-                <div class="xy-row"><div class="xy-label">MOD Y</div><div class="xy-bar-bg"><div class="xy-bar-fill fill-L" id="l-bar-y"></div></div></div>
-            </div>
-        </div>
+    <div id="ui-layer">
+        <div class="container">
+            
+            <header class="anime-target">
+                <div class="badge">Spatialgineers OS</div>
+                <h1>EL GRIMORIO</h1>
+                <p class="subtitle">Ingeniando imaginación, construyendo realidades</p>
+            </header>
 
-        <div class="midi-deck deck-r">
-            <div class="deck-title"><span class="c-yel">A/V MACROS</span> <span>CH 2</span></div>
-            <div class="pad-grid">
-                <div class="pad" id="r-idx"><div class="pad-lbl">SYN</div><div class="pad-sub">LIQUID</div></div>
-                <div class="pad" id="r-mid"><div class="pad-lbl">ECO</div><div class="pad-sub">VERTIGO</div></div>
-                <div class="pad" id="r-rng"><div class="pad-lbl">GAT</div><div class="pad-sub">STROBE</div></div>
-                <div class="pad" id="r-pnk"><div class="pad-lbl">SCR</div><div class="pad-sub">WARP</div></div>
+            <div class="guild-section anime-target">
+                <div class="section-header">
+                    <div class="section-title"><span>01</span> El Espíritu Nakama</div>
+                    <div class="icon-cross"></div>
+                </div>
+                <div class="section-content">
+                    <div class="content-inner">
+                        <p>En la Gran Era de los Piratas, el Capitán reunió a su tripulación porque cada uno tenía un sueño monumental que cumplir. Ese es el corazón del <span class="highlight">SGX Guild System</span>.</p>
+                        <p style="margin-top: 10px;">Este no es un internado tradicional. Es un <span class="highlight">"Isekai" profesional</span> donde te damos las herramientas para que construyas tu portafolio y tu futuro. Queremos ser el <em>stepping stone</em> en tu carrera tecnológica.</p>
+                        <h3>Tus Guild Masters</h3>
+                        <ul>
+                            <li><span class="highlight">Danelson (CEO):</span> Guild Master de Visión. Traza el mapa, conceptualiza y dirige el arte.</li>
+                            <li><span class="highlight">Ricardo (CPO):</span> Guild Master de Tecnología. Domina la viabilidad tecnológica, optimización (el mesh), código y rigging.</li>
+                        </ul>
+                    </div>
+                </div>
             </div>
-            <div class="xy-display">
-                <div class="xy-row"><div class="xy-label">MOD X</div><div class="xy-bar-bg"><div class="xy-bar-fill fill-R" id="r-bar-x"></div></div></div>
-                <div class="xy-row"><div class="xy-label">MOD Y</div><div class="xy-bar-bg"><div class="xy-bar-fill fill-R" id="r-bar-y"></div></div></div>
+
+            <div class="guild-section anime-target">
+                <div class="section-header">
+                    <div class="section-title"><span>02</span> Las 6 Magias (Afinidades)</div>
+                    <div class="icon-cross"></div>
+                </div>
+                <div class="section-content">
+                    <div class="content-inner">
+                        <p>Al entrar, declararás tu Afinidad de Pilar para enfocar tu desarrollo:</p>
+                        <ul>
+                            <li><span class="highlight">Spark (Interactores):</span> Desarrollo de mecánicas de juego, laberintos y gamificación.</li>
+                            <li><span class="highlight">Stage (Showrunners):</span> Producción de experiencias en vivo, eventos híbridos y visualizadores.</li>
+                            <li><span class="highlight">Showcase (Arquitectos):</span> Arquitectura virtual, digital twins y entornos 3D fotorrealistas.</li>
+                            <li><span class="highlight">Story (Loremasters):</span> Narrativa, guiones, diseño sonoro y cine inmersivo 360.</li>
+                            <li><span class="highlight">System (Code Weavers):</span> Integraciones WebApp, IA y Manufactura 3D.</li>
+                            <li><span class="highlight" style="color: var(--sgx-yellow);">Synthesize (Magos del Futuro):</span> Proyectos Enterprise élite que unifican pilares.</li>
+                        </ul>
+                    </div>
+                </div>
             </div>
+
+            <div class="guild-section anime-target">
+                <div class="section-header">
+                    <div class="section-title"><span>03</span> Rank-Up System</div>
+                    <div class="icon-cross"></div>
+                </div>
+                <div class="section-content">
+                    <div class="content-inner">
+                        <p>Tu progreso dicta tu poder. El viaje comienza desde abajo:</p>
+                        <ul>
+                            <li><span class="highlight">F - Initiate:</span> Estudiante ganando créditos. Absorbirás el pipeline SGX y completarás tu Capstone.</li>
+                            <li><span class="highlight">E - Awakened Initiate:</span> Has demostrado nivel. Tienes autonomía en sub-tareas del estudio.</li>
+                            <li><span class="highlight">D - Specialist:</span> Entras a la base de talento. Acceso al <em>Quest Board</em> para ganar <strong>Bounties ($)</strong>.</li>
+                            <li><span class="highlight">C - Master Specialist:</span> Talento avanzado capaz de ejecutar quests con mínima supervisión.</li>
+                            <li><span class="highlight">B - Veteran:</span> Talento de élite bajo NDA para misiones secretas de clientes.</li>
+                            <li><span class="highlight">A - Pillar Captain:</span> Director de División que lidera a los rangos inferiores.</li>
+                            <li><span class="highlight" style="color: var(--sgx-yellow);">S - Spatialgineer:</span> La Cúspide Absoluta. Rango de Maestros.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="guild-section anime-target">
+                <div class="section-header">
+                    <div class="section-title"><span>04</span> Misiones y Exámenes</div>
+                    <div class="icon-cross"></div>
+                </div>
+                <div class="section-content">
+                    <div class="content-inner">
+                        <h3>Origen de tu Misión</h3>
+                        <ul>
+                            <li><span class="highlight">Assigned Capstone:</span> Proyecto maestro asignado basado en tu Afinidad.</li>
+                            <li><span class="highlight">The Pitch:</span> Si tienes una idea original, preséntala. Si se aprueba, usamos recursos SGX para hacerla real.</li>
+                        </ul>
+                        <h3>The Skill Tree (Rank-Up Exam)</h3>
+                        <p>Al final del semestre, presentas resultados para subir de Rango evaluando:</p>
+                        <ul>
+                            <li><span class="highlight">Technical Skill:</span> Tu dominio bruto de las herramientas.</li>
+                            <li><span class="highlight">Engineering Rigor:</span> Optimización de peso y que la experiencia fluya a altos FPS.</li>
+                            <li><span class="highlight">Narrative & Vision:</span> Capacidad de crear un diseño cohesivo y emocional.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="guild-section anime-target">
+                <div class="section-header">
+                    <div class="section-title"><span>05</span> El Pacto del Gremio (IP)</div>
+                    <div class="icon-cross"></div>
+                </div>
+                <div class="section-content">
+                    <div class="content-inner">
+                        <p style="margin-bottom: 15px;"><strong style="color: var(--sgx-yellow); font-size: 1.1rem;">TÚ ERES DUEÑO DE TUS SUEÑOS.</strong></p>
+                        <p>Creemos en el intercambio equivalente. Si desarrollas un proyecto original (Pitch) desde cero, tú retienes la autoría de tu arte, historia y personajes.</p>
+                        <br>
+                        <p>A través de nuestros Acuerdos, <span class="highlight">Spatialgineers retiene el control de los códigos base, lógica backend y templates</span>. Nosotros proveemos el motor que hace que tu magia funcione. Si la idea se comercializa, operaremos juntos para que recibas tu porción del botín.</p>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
-</div>
 
-<div id="canvas-container"></div>
+    <script>
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx;
 
-<script>
-// --- CORE UTILS ---
-let isOnline = false;
-const lerp = (start, end, amt) => (1 - amt) * start + amt * end;
-const mapRange = (val, inMin, inMax, outMin, outMax) => {
-    let c = Math.max(inMin, Math.min(inMax, val));
-    return outMin + ((c - inMin) / (inMax - inMin)) * (outMax - outMin);
-};
-
-// --- STATE MANAGEMENT ---
-const state = {
-    L: { pads: { idx:false, mid:false, rng:false, pnk:false }, x: 0.5, y: 0.5, lastSeen: 0 },
-    R: { pads: { idx:false, mid:false, rng:false, pnk:false }, x: 0.5, y: 0.5, lastSeen: 0, lastX: 0.5, velX: 0 },
-    v: { 
-        cScale: 1, pScale: 1, cRotX: 0.002, cRotY: 0.003, pRot: -0.001, 
-        cBase: new THREE.Color(0x32527B), cFX: new THREE.Color(0xFDCC0D), 
-        fov: 60, z: 8, wire: true, strobe: 1, glitch: 0, liquid: 0, warp: 0 
-    }
-};
-
-// --- AUDIO/VISUAL SYNTHESIS ENGINE ---
-let actx, audioEl;
-let lpFilt, hpFilt, bassEQ, trebEQ, delay, wetGain, roboGain, roboOsc, synthOsc, synthGain, gaterGain, gaterOsc;
-let scene, camera, renderer, coreMesh, partSys;
-
-function initEngines() {
-    // AUDIO INIT
-    actx = new (window.AudioContext || window.webkitAudioContext)();
-    audioEl = new Audio(); audioEl.crossOrigin = "anonymous";
-    audioEl.src = 'https://static.wixstatic.com/mp3/fe81a7_5cd8c25c8a9841acbdb0726705d1f215.mp3';
-    audioEl.loop = true; audioEl.preservesPitch = false;
-    const src = actx.createMediaElementSource(audioEl);
-
-    // Filters & EQ
-    lpFilt = actx.createBiquadFilter(); lpFilt.type = 'lowpass'; lpFilt.frequency.value = 20000;
-    hpFilt = actx.createBiquadFilter(); hpFilt.type = 'highpass'; hpFilt.frequency.value = 10;
-    bassEQ = actx.createBiquadFilter(); bassEQ.type = 'lowshelf'; bassEQ.frequency.value = 120;
-    trebEQ = actx.createBiquadFilter(); trebEQ.type = 'highshelf'; trebEQ.frequency.value = 4000;
-
-    // Robo Ring Mod
-    roboGain = actx.createGain(); roboGain.gain.value = 1;
-    roboOsc = actx.createOscillator(); roboOsc.type = 'sine'; roboOsc.start();
-    const roboMod = actx.createGain(); roboMod.gain.value = 0;
-    roboOsc.connect(roboMod); roboMod.connect(roboGain.gain);
-
-    // Gater
-    gaterGain = actx.createGain(); gaterGain.gain.value = 1;
-    gaterOsc = actx.createOscillator(); gaterOsc.type = 'square'; gaterOsc.start();
-    const gaterMod = actx.createGain(); gaterMod.gain.value = 0;
-    gaterOsc.connect(gaterMod); gaterMod.connect(gaterGain.gain);
-
-    // Synth
-    synthOsc = actx.createOscillator(); synthOsc.type = 'sawtooth'; synthOsc.start();
-    synthGain = actx.createGain(); synthGain.gain.value = 0;
-    synthOsc.connect(synthGain); synthGain.connect(actx.destination);
-
-    // Delay
-    delay = actx.createDelay(2.0); delay.delayTime.value = 0.5;
-    const fbk = actx.createGain(); fbk.gain.value = 0.6; 
-    wetGain = actx.createGain(); wetGain.gain.value = 0;
-    delay.connect(fbk); fbk.connect(delay); delay.connect(wetGain);
-
-    // Ruteo Master
-    src.connect(bassEQ); bassEQ.connect(trebEQ); trebEQ.connect(hpFilt); hpFilt.connect(lpFilt);
-    lpFilt.connect(roboGain); roboGain.connect(gaterGain);
-    gaterGain.connect(actx.destination); // Dry
-    gaterGain.connect(delay); wetGain.connect(actx.destination); // Wet
-
-    audioEl.play().catch(e=>console.log(e));
-
-    // VISUAL INIT
-    scene = new THREE.Scene(); scene.fog = new THREE.FogExp2(0x020203, 0.04);
-    camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000); camera.position.z = 8;
-    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    document.getElementById('canvas-container').appendChild(renderer.domElement);
-
-    coreMesh = new THREE.Mesh(new THREE.IcosahedronGeometry(1.5, 2), new THREE.MeshBasicMaterial({ color: 0x32527B, wireframe: true, transparent: true, opacity: 0.85 }));
-    scene.add(coreMesh);
-
-    const pGeo = new THREE.BufferGeometry(); const pos = new Float32Array(1500 * 3);
-    for(let i=0; i<1500*3; i++) pos[i] = (Math.random() - 0.5) * 12;
-    pGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    partSys = new THREE.Points(pGeo, new THREE.PointsMaterial({ color: 0xFDCC0D, size: 0.06, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending }));
-    scene.add(partSys);
-}
-
-// EL MOTOR SINCRONIZADO A/V
-function processAVEngine() {
-    if(!actx) return;
-    const nowT = actx.currentTime;
-    const pL = state.L.pads; const pR = state.R.pads;
-    const xL = state.L.x; const yL = state.L.y;
-    const xR = state.R.x; const yR = state.R.y;
-    const v = state.v; const sm = 0.15;
-
-    // --- MANO IZQUIERDA (CH 1) ---
-    // 1. FLT + COLOR (IDX)
-    if(pL.idx) {
-        if(yL < 0.5) { lpFilt.frequency.setTargetAtTime(mapRange(yL, 0, 0.5, 200, 20000), nowT, sm); hpFilt.frequency.setTargetAtTime(10, nowT, sm); } 
-        else { lpFilt.frequency.setTargetAtTime(20000, nowT, sm); hpFilt.frequency.setTargetAtTime(mapRange(yL, 0.5, 1, 10, 4000), nowT, sm); }
-        lpFilt.Q.setTargetAtTime(mapRange(xL, 0, 1, 0, 15), nowT, sm); hpFilt.Q.setTargetAtTime(mapRange(xL, 0, 1, 0, 15), nowT, sm);
-        v.cBase.setHSL(xL, 0.8, 0.5); v.cFX.setHSL(yL, 0.8, 0.5);
-    } else {
-        lpFilt.frequency.setTargetAtTime(20000, nowT, 0.3); hpFilt.frequency.setTargetAtTime(10, nowT, 0.3);
-        lpFilt.Q.setTargetAtTime(0, nowT, 0.3); hpFilt.Q.setTargetAtTime(0, nowT, 0.3);
-        v.cBase.setHex(0x32527B); v.cFX.setHex(0xFDCC0D);
-    }
-
-    // 2. BASS + CORE SCALE (MID)
-    if(pL.mid) {
-        bassEQ.gain.setTargetAtTime(mapRange(xL, 0, 1, -15, 20), nowT, sm);
-        v.cScale = mapRange(yL, 0, 1, 0.5, 2.5); // Bass infla el núcleo
-    } else {
-        bassEQ.gain.setTargetAtTime(0, nowT, 0.3); v.cScale = 1;
-    }
-
-    // 3. TREBLE + PARTICLES (RNG)
-    if(pL.rng) {
-        trebEQ.gain.setTargetAtTime(mapRange(xL, 0, 1, -15, 15), nowT, sm);
-        v.pScale = mapRange(yL, 0, 1, 0.5, 3.5); // Treble expande partículas
-    } else {
-        trebEQ.gain.setTargetAtTime(0, nowT, 0.3); v.pScale = 1;
-    }
-
-    // 4. ROBO-VOX + GLITCH WIREFRAME (PNK)
-    if(pL.pnk) {
-        roboOsc.frequency.setTargetAtTime(mapRange(xL, 0, 1, 20, 800), nowT, sm);
-        roboGain.gain.setTargetAtTime(1 - mapRange(yL, 0, 1, 0, 1), nowT, sm);
-        v.glitch = mapRange(yL, 0, 1, 0, 0.5);
-        v.wire = (xL > 0.5); // Activa Wireframe
-    } else {
-        roboGain.gain.setTargetAtTime(1, nowT, 0.3);
-        v.glitch = 0; v.wire = true;
-    }
-
-    // --- MANO DERECHA (CH 2) ---
-    // 1. SYNTH + LIQUID CORE (IDX)
-    if(pR.idx) {
-        synthOsc.frequency.setTargetAtTime(mapRange(xR, 0, 1, 60, 800), nowT, sm);
-        synthGain.gain.setTargetAtTime(mapRange(yR, 0, 1, 0, 0.25), nowT, sm);
-        v.liquid = mapRange(yR, 0, 1, 0, 0.8);
-    } else {
-        synthGain.gain.setTargetAtTime(0, nowT, 0.2); v.liquid = 0;
-    }
-
-    // 2. ECHO + VERTIGO CAM (MID)
-    if(pR.mid) {
-        delay.delayTime.setTargetAtTime(mapRange(xR, 0, 1, 0.1, 0.8), nowT, sm);
-        wetGain.gain.setTargetAtTime(mapRange(yR, 0, 1, 0, 0.8), nowT, sm);
-        v.fov = mapRange(yR, 0, 1, 20, 140); v.z = mapRange(yR, 0, 1, 15, 3);
-    } else {
-        wetGain.gain.setTargetAtTime(0, nowT, 0.5); v.fov = 60; v.z = 8;
-    }
-
-    // 3. GATER + STROBE (RNG)
-    if(pR.rng) {
-        let gRate = mapRange(xR, 0, 1, 2, 24);
-        gaterOsc.frequency.setTargetAtTime(gRate, nowT, sm);
-        // Modulación dura para Gater de audio
-        // Simulamos opacidad visual basada en el mismo oscilador matemático
-        v.strobe = (Math.sin(Date.now() * 0.001 * gRate * Math.PI) > 0) ? 1 : 0.2;
-    } else {
-        v.strobe = 1;
-    }
-
-    // 4. SCRATCH + TIME WARP SPIN (PNK)
-    if(pR.pnk) {
-        let delta = xR - state.R.lastX;
-        state.R.velX = lerp(state.R.velX, delta * 30, 0.2);
-        let targetRate = Math.max(0.01, Math.min(2.5, 1 + state.R.velX)); // Tape Stop / Scratch
-        if(Math.abs(audioEl.playbackRate - targetRate) > 0.05) audioEl.playbackRate = targetRate;
-        
-        v.warp = lerp(v.warp, state.R.velX * 5, 0.1); // El mundo gira con el scratch
-    } else {
-        if(audioEl.playbackRate !== 1.0) audioEl.playbackRate = 1.0;
-        state.R.velX = 0; v.warp = lerp(v.warp, 0, 0.1);
-    }
-    state.R.lastX = xR;
-
-    // --- APLICAR TRANSFORMACIONES 3D ---
-    const lSpd = 0.1;
-    let tScale = v.cScale + (Math.sin(Date.now()*0.005) * v.liquid); // Liquid Morph
-    coreMesh.scale.lerp(new THREE.Vector3(tScale, v.cScale, v.cScale + v.liquid), lSpd);
-    partSys.scale.lerp(new THREE.Vector3(v.pScale, v.pScale, v.pScale), lSpd);
-    
-    coreMesh.material.color.lerp(v.cBase, lSpd); partSys.material.color.lerp(v.cFX, lSpd);
-    coreMesh.material.wireframe = v.wire;
-    coreMesh.material.opacity = v.strobe * 0.85; partSys.material.opacity = v.strobe * 0.8;
-    
-    camera.fov = lerp(camera.fov, v.fov, lSpd); camera.position.z = lerp(camera.position.z, v.z, lSpd);
-    camera.updateProjectionMatrix();
-
-    // Glitch Position Jitter
-    if(v.glitch > 0) {
-        coreMesh.position.x = (Math.random() - 0.5) * v.glitch;
-        coreMesh.position.y = (Math.random() - 0.5) * v.glitch;
-    } else {
-        coreMesh.position.set(0,0,0);
-    }
-
-    coreMesh.rotation.y += v.cRotY + v.warp; coreMesh.rotation.x += v.cRotX;
-    partSys.rotation.y += v.pRot + (v.warp * 0.5);
-    scene.rotation.z = lerp(scene.rotation.z, v.warp * 0.5, 0.1); // Time Warp total
-}
-
-// --- MEDIAPIPE GESTURE ENGINE ---
-const videoEl = document.getElementById('input_video');
-const canvasEl = document.getElementById('output_canvas');
-const ctx = canvasEl.getContext('2d');
-const dotL = document.getElementById('dot-l'); const dotR = document.getElementById('dot-r');
-
-const hands = new Hands({ locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}` });
-hands.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.6, minTrackingConfidence: 0.6 });
-
-function getActivePinches(lm) {
-    const thumb = lm[4];
-    const fingers = [{id:'idx', tip:8}, {id:'mid', tip:12}, {id:'rng', tip:16}, {id:'pnk', tip:20}];
-    let pads = { idx:false, mid:false, rng:false, pnk:false };
-    let hasAny = false; let cx = 0.5, cy = 0.5;
-
-    fingers.forEach(f => {
-        if (Math.hypot(thumb.x - lm[f.tip].x, thumb.y - lm[f.tip].y) < 0.07) { 
-            pads[f.id] = true; hasAny = true;
-            cx = (thumb.x + lm[f.tip].x) / 2; cy = (thumb.y + lm[f.tip].y) / 2;
+        function initAudio() {
+            if (!audioCtx) audioCtx = new AudioContext();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
         }
-    });
-    return { pads, active: hasAny, x: cx, y: cy };
-}
 
-function updateHUD() {
-    ['idx','mid','rng','pnk'].forEach(i => {
-        document.getElementById(`l-${i}`).classList.toggle('active-L', state.L.pads[i]);
-        document.getElementById(`r-${i}`).classList.toggle('active-R', state.R.pads[i]);
-    });
-    document.getElementById('l-bar-x').style.width = `${state.L.x * 100}%`; document.getElementById('l-bar-y').style.width = `${state.L.y * 100}%`;
-    document.getElementById('r-bar-x').style.width = `${state.R.x * 100}%`; document.getElementById('r-bar-y').style.width = `${state.R.y * 100}%`;
-}
+        function playUIBeep() {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.05);
+            gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.1);
+        }
 
-hands.onResults((res) => {
-    ctx.save(); ctx.clearRect(0,0, canvasEl.width, canvasEl.height);
-    ctx.drawImage(res.image, 0,0, canvasEl.width, canvasEl.height);
+        function playSphereChime() {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, audioCtx.currentTime); // A5
+            osc.frequency.setValueAtTime(1760, audioCtx.currentTime + 0.1); // A6
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.3);
+        }
+    </script>
 
-    let fL = false, fR = false; const now = Date.now();
+    <script>
+        // --- 0. BOOT SEQUENCE ---
+        document.addEventListener("DOMContentLoaded", () => {
+            const lines = document.querySelectorAll('.log-line');
+            const bootScreen = document.getElementById('boot-screen');
+            
+            // Animación de texto terminal
+            anime({
+                targets: lines,
+                opacity: 1,
+                translateY: [10, 0],
+                delay: anime.stagger(400),
+                easing: 'easeOutExpo',
+                complete: function() {
+                    setTimeout(() => {
+                        bootScreen.style.display = 'none';
+                        document.querySelector('header').style.visibility = 'visible';
+                        document.querySelectorAll('.guild-section').forEach(el => el.style.visibility = 'visible');
+                        
+                        // Iniciar animaciones de UI
+                        anime({
+                            targets: '.anime-target',
+                            translateY: [40, 0],
+                            opacity: [0, 1],
+                            delay: anime.stagger(150),
+                            easing: 'easeOutExpo',
+                            duration: 1200
+                        });
+                    }, 800);
+                }
+            });
+        });
 
-    if (res.multiHandLandmarks && res.multiHandLandmarks.length > 0) {
-        document.getElementById('cam-status').style.display = 'none';
-        for (let i = 0; i < res.multiHandLandmarks.length; i++) {
-            const lm = res.multiHandLandmarks[i];
-            const isLeft = res.multiHandedness[i].label === 'Right'; // Espejo
+        // Evento global para inicializar audio al primer tap (Browsers requieren interacción)
+        document.body.addEventListener('pointerdown', initAudio, { once: true });
 
-            drawConnectors(ctx, lm, HAND_CONNECTIONS, {color: 'rgba(255,255,255,0.2)', lineWidth: 1});
-            const data = getActivePinches(lm);
-            const nX = mapRange(1 - data.x, 0.25, 0.75, 0, 1); const nY = mapRange(data.y, 0.2, 0.8, 0, 1);
+        // --- 1. CONFIGURACIÓN THREE.JS (Highcoon Head 3D Gigante) ---
+        const canvasContainer = document.getElementById('sgx-canvas');
+        const scene = new THREE.Scene();
+        
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 5;
 
-            if (isLeft) {
-                fL = true; state.L.lastSeen = now; state.L.pads = data.pads;
-                if(data.active) { state.L.x = lerp(state.L.x, nX, 0.3); state.L.y = lerp(state.L.y, nY, 0.3); }
-                drawLandmarks(ctx, lm, {color: data.active ? '#B87333' : '#666', radius: data.active?3:1});
-                dotL.style.opacity = data.active ? 1 : 0; dotL.style.left = `${(1-data.x)*100}%`; dotL.style.top = `${data.y*100}%`;
-            } else {
-                fR = true; state.R.lastSeen = now; state.R.pads = data.pads;
-                if(data.active) { state.R.x = lerp(state.R.x, nX, 0.3); state.R.y = lerp(state.R.y, nY, 0.3); }
-                drawLandmarks(ctx, lm, {color: data.active ? '#FDCC0D' : '#666', radius: data.active?3:1});
-                dotR.style.opacity = data.active ? 1 : 0; dotR.style.left = `${(1-data.x)*100}%`; dotR.style.top = `${data.y*100}%`;
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        canvasContainer.appendChild(renderer.domElement);
+
+        let highcoonHead = null;
+        let mouseX = 0; let mouseY = 0;
+        const windowHalfX = window.innerWidth / 2;
+        const windowHalfY = window.innerHeight / 2;
+
+        const loader = new THREE.GLTFLoader();
+        const modelUrl = 'https://static.wixstatic.com/3d/fe81a7_cf1ed4e58d0048efa955f39d347a9466.glb';
+
+        loader.load(modelUrl, function(gltf) {
+            highcoonHead = gltf.scene;
+            
+            const wireframeMaterial = new THREE.MeshBasicMaterial({ 
+                color: 0xfdcc0d, 
+                wireframe: true, 
+                transparent: true, 
+                opacity: 0.25 // Un poco más transparente para no opacar el texto
+            });
+
+            highcoonHead.traverse((child) => {
+                if (child.isMesh) child.material = wireframeMaterial;
+            });
+
+            // Hacerlo MUCHO MÁS GRANDE
+            highcoonHead.scale.set(3.8, 3.8, 3.8); 
+            highcoonHead.position.y = -1.5; // Bajarlo para centrar
+            scene.add(highcoonHead);
+
+        });
+
+        document.addEventListener('mousemove', (event) => {
+            mouseX = (event.clientX - windowHalfX) / windowHalfX;
+            mouseY = (event.clientY - windowHalfY) / windowHalfY;
+        });
+
+        document.addEventListener('touchmove', (event) => {
+            mouseX = (event.touches[0].clientX - windowHalfX) / windowHalfX;
+            mouseY = (event.touches[0].clientY - windowHalfY) / windowHalfY;
+        });
+
+        function animate3D() {
+            requestAnimationFrame(animate3D);
+            if (highcoonHead) {
+                const targetRotationX = mouseY * 0.4;
+                const targetRotationY = mouseX * 0.6;
+                highcoonHead.rotation.x += (targetRotationX - highcoonHead.rotation.x) * 0.05;
+                highcoonHead.rotation.y += (targetRotationY - highcoonHead.rotation.y) * 0.05;
+            }
+            renderer.render(scene, camera);
+        }
+        animate3D();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // --- 2. EL MINI-JUEGO GAMIFICADO ---
+        let score = 0;
+        const maxScore = 10;
+        const gameLayer = document.getElementById('minigame-layer');
+        const modal = document.getElementById('secret-modal');
+        const modalBox = document.getElementById('modal-box');
+        const scoreDisplay = document.getElementById('score-display');
+        let gameActive = true;
+
+        function spawnSphere() {
+            if (!gameActive) return;
+
+            const sphere = document.createElement('div');
+            sphere.classList.add('energy-sphere');
+            
+            const randomX = Math.random() * 80 + 10;
+            sphere.style.left = `${randomX}vw`;
+            
+            const duration = Math.random() * 3 + 5; 
+            sphere.style.animationDuration = `${duration}s`;
+
+            sphere.addEventListener('pointerdown', (e) => {
+                if (!gameActive) return;
+                
+                playSphereChime(); // Audio feedback
+
+                sphere.style.transition = 'all 0.15s';
+                sphere.style.transform = 'scale(0)';
+                sphere.style.opacity = '0';
+                
+                if (navigator.vibrate) navigator.vibrate(30);
+
+                score++;
+                
+                // Mostrar tracker brevemente
+                scoreDisplay.innerText = `${score}/${maxScore}`;
+                scoreDisplay.style.opacity = '1';
+                setTimeout(() => { if(gameActive) scoreDisplay.style.opacity = '0'; }, 2000);
+                
+                setTimeout(() => sphere.remove(), 200);
+
+                if (score >= maxScore) {
+                    triggerReward();
+                }
+            });
+
+            gameLayer.appendChild(sphere);
+            setTimeout(() => { if (sphere.parentElement) sphere.remove(); }, duration * 1000);
+        }
+
+        setInterval(spawnSphere, 2200); // Salen esferas
+
+        function triggerReward() {
+            gameActive = false;
+            scoreDisplay.style.opacity = '0';
+            gameLayer.innerHTML = '';
+            
+            modal.style.pointerEvents = 'auto';
+            modal.style.opacity = '1';
+            modalBox.style.transform = 'scale(1)';
+            
+            // Audio de victoria
+            if(audioCtx) {
+                playSphereChime();
+                setTimeout(playSphereChime, 150);
+                setTimeout(playSphereChime, 300);
             }
         }
-    }
-    
-    if(!fL && (now - state.L.lastSeen > 200)) { state.L.pads = {idx:false, mid:false, rng:false, pnk:false}; state.L.x = lerp(state.L.x, 0.5, 0.1); state.L.y = lerp(state.L.y, 0.5, 0.1); dotL.style.opacity = 0; }
-    if(!fR && (now - state.R.lastSeen > 200)) { state.R.pads = {idx:false, mid:false, rng:false, pnk:false}; state.R.x = lerp(state.R.x, 0.5, 0.1); state.R.y = lerp(state.R.y, 0.5, 0.1); dotR.style.opacity = 0; }
 
-    updateHUD(); ctx.restore();
-});
-
-const cameraHandler = new Camera(videoEl, { onFrame: async () => { if(isOnline) await hands.send({image: videoEl}); }, width: 160, height: 120 });
-
-function enableFallback() {
-    let mDown = false;
-    const handleMove = (x, y) => {
-        if(!isOnline || Date.now() - state.R.lastSeen < 2000) return; 
-        if(mDown) {
-            state.R.pads = {idx:true, mid:true, rng:false, pnk:false}; // Activa Synth + Liquid y Filtro en fallback
-            state.R.x = lerp(state.R.x, mapRange(x/window.innerWidth, 0, 1, 0, 1), 0.4); state.R.y = lerp(state.R.y, mapRange(y/window.innerHeight, 0, 1, 0, 1), 0.4);
-            state.L.pads = {idx:true, mid:false, rng:false, pnk:false}; state.L.x = state.R.x; state.L.y = state.R.y;
-            updateHUD();
+        function closeModal() {
+            modal.style.opacity = '0';
+            modal.style.pointerEvents = 'none';
+            modalBox.style.transform = 'scale(0.8)';
+            score = 0; 
+            setTimeout(() => { gameActive = true; }, 1000);
         }
-    };
-    window.addEventListener('mousedown', () => mDown = true);
-    window.addEventListener('mouseup', () => { mDown = false; state.R.pads = {idx:false, mid:false, rng:false, pnk:false}; state.L.pads = {idx:false, mid:false, rng:false, pnk:false}; updateHUD(); });
-    window.addEventListener('mousemove', (e) => handleMove(e.clientX, e.clientY));
-    window.addEventListener('touchstart', () => mDown = true, {passive: true});
-    window.addEventListener('touchend', () => { mDown = false; state.R.pads = {idx:false, mid:false, rng:false, pnk:false}; state.L.pads = {idx:false, mid:false, rng:false, pnk:false}; updateHUD(); }, {passive: true});
-    window.addEventListener('touchmove', (e) => handleMove(e.touches[0].clientX, e.touches[0].clientY), {passive: true});
-}
 
-// --- BOOT SEQUENCE ---
-document.getElementById('initBtn').addEventListener('click', () => {
-    document.getElementById('boot-modal').classList.add('hidden'); document.getElementById('hud').classList.remove('hidden');
-    
-    if(!isOnline) {
-        initEngines(); isOnline = true; run();
-        let timeout = setTimeout(() => { if(!state.L.lastSeen) { document.getElementById('cam-status').style.display = 'flex'; enableFallback(); } }, 5000);
-        cameraHandler.start().then(() => clearTimeout(timeout)).catch(e => { document.getElementById('cam-status').style.display = 'flex'; enableFallback(); });
-        enableFallback(); 
-    } else {
-        if(actx && actx.state === 'suspended') actx.resume();
-    }
-});
+        // --- 3. ANIMACIONES UI ---
+        const sections = document.querySelectorAll('.guild-section');
+        sections.forEach(section => {
+            const header = section.querySelector('.section-header');
+            const content = section.querySelector('.section-content');
+            const inner = section.querySelector('.content-inner');
 
-document.getElementById('menuBtn').addEventListener('click', () => {
-    document.getElementById('boot-modal').classList.remove('hidden'); document.getElementById('hud').classList.add('hidden');
-});
+            header.addEventListener('pointerdown', () => {
+                const isActive = section.classList.contains('active');
+                
+                // Cerrar todos
+                sections.forEach(s => {
+                    if (s.classList.contains('active')) {
+                        s.classList.remove('active');
+                        anime({
+                            targets: s.querySelector('.section-content'),
+                            height: 0,
+                            duration: 350,
+                            easing: 'easeInOutQuad'
+                        });
+                    }
+                });
 
-function run() {
-    requestAnimationFrame(run);
-    if(isOnline) processAVEngine();
-    if(renderer && scene) renderer.render(scene, camera);
-}
+                // Abrir actual
+                if (!isActive) {
+                    playUIBeep(); // Audio feedback UI
+                    section.classList.add('active');
+                    const height = inner.offsetHeight;
+                    anime({
+                        targets: content,
+                        height: [0, height],
+                        duration: 400,
+                        easing: 'easeOutQuart'
+                    });
+                    if (navigator.vibrate) navigator.vibrate(15);
+                }
+            });
+        });
 
-window.addEventListener('resize', () => {
-    if(camera) { camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); }
-});
-</script>
+    </script>
 </body>
 </html>
