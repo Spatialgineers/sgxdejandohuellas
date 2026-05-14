@@ -83,7 +83,7 @@
             background-image: url('https://static.wixstatic.com/media/fe81a7_080e1efa8bb24e43bd8b503e557565b8~mv2.png');
             background-size: cover;
             background-position: center;
-            border-radius: 100%;
+            border-radius: 50%;
             pointer-events: auto; /* Las esferas SI se tocan */
             cursor: pointer;
             transition: transform 0.1s;
@@ -147,6 +147,7 @@
             letter-spacing: 2px;
             margin: 20px 0;
             border-radius: 8px;
+            user-select: all; /* Permite copiar el código fácilmente */
         }
 
         /* --- INTERFAZ PRINCIPAL --- */
@@ -307,6 +308,53 @@
             font-size: 1.2rem; z-index: 60; opacity: 0; transition: opacity 0.3s;
         }
 
+        /* --- BOTONES DE ACCIÓN (CTAs) --- */
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 40px;
+            visibility: hidden; /* Oculto hasta que cargue el boot */
+        }
+
+        .btn-main {
+            background: var(--sgx-yellow);
+            color: var(--sgx-dark-bg);
+            text-decoration: none;
+            text-align: center;
+            padding: 18px 20px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 800;
+            font-size: 1.1rem;
+            border-radius: 8px;
+            text-transform: uppercase;
+            box-shadow: 0 0 20px rgba(253, 204, 13, 0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn-main:active {
+            transform: scale(0.96);
+        }
+
+        .btn-social {
+            background: rgba(5, 8, 15, 0.8);
+            color: #ffffff;
+            text-decoration: none;
+            text-align: center;
+            padding: 15px 20px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 600;
+            font-size: 1rem;
+            border: 1px solid var(--sgx-blue);
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .btn-social:active {
+            transform: scale(0.96);
+            background: var(--sgx-glass);
+        }
+
     </style>
 </head>
 <body>
@@ -328,8 +376,8 @@
         <div class="modal-content" id="modal-box">
             <h2>¡EASTER EGG ENCONTRADO!</h2>
             <p style="color: var(--sgx-grey);">Has recolectado 10 esferas de energía. Tu curiosidad espacial ha sido recompensada.</p>
-            <p style="margin-top: 15px;">Danos este código secreto y ganarás el derecho a una <strong style="color: #fff;">Galería Virtual (Tier 2)</strong> para exhibir tu propio modelo 3D.</p>
-            <div class="code-box" id="secret-code-box">GENERANDO...</div>
+            <p style="margin-top: 15px;">Guarda este código de autorización único y preséntalo para ganar el derecho a una <strong style="color: #fff;">Galería Virtual (Tier 2)</strong>.</p>
+            <div class="code-box" id="reward-code-box">GENERANDO...</div>
             <button class="btn-close" onclick="closeModal()">ACEPTAR RECOMPENSA</button>
         </div>
     </div>
@@ -440,6 +488,11 @@
                 </div>
             </div>
 
+            <div class="action-buttons anime-target">
+                <a href="https://spatialgineers.com/guild" target="_blank" class="btn-main">ÚNETE AL GUILD (Aplica Aquí)</a>
+                <a href="https://www.instagram.com/spatialgineers/" target="_blank" class="btn-social">Síguenos en Instagram</a>
+            </div>
+
         </div>
     </div>
 
@@ -501,6 +554,7 @@
                         bootScreen.style.display = 'none';
                         document.querySelector('header').style.visibility = 'visible';
                         document.querySelectorAll('.guild-section').forEach(el => el.style.visibility = 'visible');
+                        document.querySelector('.action-buttons').style.visibility = 'visible';
                         
                         // Iniciar animaciones de UI
                         anime({
@@ -595,16 +649,17 @@
         const modal = document.getElementById('secret-modal');
         const modalBox = document.getElementById('modal-box');
         const scoreDisplay = document.getElementById('score-display');
+        const rewardCodeBox = document.getElementById('reward-code-box'); // Capturamos la caja del código
         let gameActive = true;
 
-        // NUEVA FUNCIÓN: Generador de código aleatorio
-        function generarCodigoAleatorio() {
-            const caracteres = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-            let codigoRandom = '';
+        // Función para generar código aleatorio
+        function generateRandomAuthCode() {
+            const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let result = 'SGX-';
             for (let i = 0; i < 6; i++) {
-                codigoRandom += caracteres.charAt(Math.floor(Math.random() * caracteres.length));
+                result += characters.charAt(Math.floor(Math.random() * characters.length));
             }
-            return 'HIGHCOON-' + codigoRandom;
+            return result;
         }
 
         function spawnSphere() {
@@ -655,9 +710,8 @@
             scoreDisplay.style.opacity = '0';
             gameLayer.innerHTML = '';
             
-            // Generar e insertar el nuevo código aleatorio en el HTML
-            const nuevoCodigo = generarCodigoAleatorio();
-            document.getElementById('secret-code-box').innerText = nuevoCodigo;
+            // Generar y asignar el nuevo código random antes de abrir el modal
+            rewardCodeBox.innerText = generateRandomAuthCode();
 
             modal.style.pointerEvents = 'auto';
             modal.style.opacity = '1';
