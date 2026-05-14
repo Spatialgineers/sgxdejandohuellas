@@ -21,8 +21,8 @@
             --sgx-blue: #32527b;
             --sgx-grey: #888888;
             --sgx-dark-bg: #05080f;
-            --sgx-glass: rgba(50, 82, 123, 0.25);
-            --sgx-border: rgba(253, 204, 13, 0.3);
+            --sgx-glass: rgba(50, 82, 123, 0.6);
+            --sgx-border: rgba(253, 204, 13, 0.6);
         }
 
         * {
@@ -80,10 +80,10 @@
             position: absolute;
             width: 70px;
             height: 70px;
-            background-image: url('https://static.wixstatic.com/media/fe81a7_5670a65700584faa86f361573ecbf1f1~mv2.png');
+            background-image: url('https://static.wixstatic.com/media/fe81a7_080e1efa8bb24e43bd8b503e557565b8~mv2.png');
             background-size: cover;
             background-position: center;
-            border-radius: 50%;
+            border-radius: 100%;
             pointer-events: auto; /* Las esferas SI se tocan */
             cursor: pointer;
             transition: transform 0.1s;
@@ -329,7 +329,7 @@
             <h2>¡EASTER EGG ENCONTRADO!</h2>
             <p style="color: var(--sgx-grey);">Has recolectado 10 esferas de energía. Tu curiosidad espacial ha sido recompensada.</p>
             <p style="margin-top: 15px;">Danos este código secreto y ganarás el derecho a una <strong style="color: #fff;">Galería Virtual (Tier 2)</strong> para exhibir tu propio modelo 3D.</p>
-            <div class="code-box">HIGHCOON-X10</div>
+            <div class="code-box" id="secret-code-box">GENERANDO...</div>
             <button class="btn-close" onclick="closeModal()">ACEPTAR RECOMPENSA</button>
         </div>
     </div>
@@ -597,6 +597,16 @@
         const scoreDisplay = document.getElementById('score-display');
         let gameActive = true;
 
+        // NUEVA FUNCIÓN: Generador de código aleatorio
+        function generarCodigoAleatorio() {
+            const caracteres = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let codigoRandom = '';
+            for (let i = 0; i < 6; i++) {
+                codigoRandom += caracteres.charAt(Math.floor(Math.random() * caracteres.length));
+            }
+            return 'HIGHCOON-' + codigoRandom;
+        }
+
         function spawnSphere() {
             if (!gameActive) return;
 
@@ -645,6 +655,10 @@
             scoreDisplay.style.opacity = '0';
             gameLayer.innerHTML = '';
             
+            // Generar e insertar el nuevo código aleatorio en el HTML
+            const nuevoCodigo = generarCodigoAleatorio();
+            document.getElementById('secret-code-box').innerText = nuevoCodigo;
+
             modal.style.pointerEvents = 'auto';
             modal.style.opacity = '1';
             modalBox.style.transform = 'scale(1)';
