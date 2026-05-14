@@ -73,7 +73,7 @@
             position: fixed;
             top: 0; left: 0; width: 100vw; height: 100vh;
             z-index: 50; 
-            pointer-events: none; /* No bloquea scroll */
+            pointer-events: none; 
         }
 
         .energy-sphere {
@@ -84,7 +84,7 @@
             background-size: cover;
             background-position: center;
             border-radius: 50%;
-            pointer-events: auto; /* Las esferas SI se tocan */
+            pointer-events: auto; 
             cursor: pointer;
             transition: transform 0.1s;
             animation: floatUp 6s linear infinite;
@@ -147,7 +147,7 @@
             letter-spacing: 2px;
             margin: 20px 0;
             border-radius: 8px;
-            user-select: all; /* Permite copiar el código fácilmente */
+            user-select: all; 
         }
 
         /* --- INTERFAZ PRINCIPAL --- */
@@ -157,20 +157,20 @@
             width: 100%;
             height: 100vh;
             overflow-y: auto;
-            pointer-events: none;
+            /* FIX DE SCROLL: Ahora permite interactuar con toda la pantalla */
+            pointer-events: auto; 
         }
 
         .container {
             max-width: 600px;
             margin: 0 auto;
             padding: 40px 20px 150px 20px;
-            pointer-events: auto; 
         }
 
         header {
             text-align: center;
             margin-bottom: 50px;
-            visibility: hidden; /* Oculto hasta que cargue el boot */
+            visibility: hidden; 
         }
 
         .badge {
@@ -213,7 +213,7 @@
             margin-bottom: 15px;
             overflow: hidden;
             transition: all 0.3s ease;
-            visibility: hidden; /* Oculto para la anim inicial */
+            visibility: hidden; 
         }
 
         .guild-section.active {
@@ -301,7 +301,6 @@
             margin-top: 15px;
         }
 
-        /* Score Tracker Oculto (Aparece en consola/mente) */
         .score-tracker {
             position: fixed; top: 20px; right: 20px;
             font-family: 'Space Grotesk', sans-serif; color: var(--sgx-yellow);
@@ -314,7 +313,7 @@
             flex-direction: column;
             gap: 15px;
             margin-top: 40px;
-            visibility: hidden; /* Oculto hasta que cargue el boot */
+            visibility: hidden; 
         }
 
         .btn-main {
@@ -525,8 +524,8 @@
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.type = 'sine';
-            osc.frequency.setValueAtTime(880, audioCtx.currentTime); // A5
-            osc.frequency.setValueAtTime(1760, audioCtx.currentTime + 0.1); // A6
+            osc.frequency.setValueAtTime(880, audioCtx.currentTime); 
+            osc.frequency.setValueAtTime(1760, audioCtx.currentTime + 0.1); 
             gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
             gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
             osc.connect(gain);
@@ -542,7 +541,6 @@
             const lines = document.querySelectorAll('.log-line');
             const bootScreen = document.getElementById('boot-screen');
             
-            // Animación de texto terminal
             anime({
                 targets: lines,
                 opacity: 1,
@@ -556,7 +554,6 @@
                         document.querySelectorAll('.guild-section').forEach(el => el.style.visibility = 'visible');
                         document.querySelector('.action-buttons').style.visibility = 'visible';
                         
-                        // Iniciar animaciones de UI
                         anime({
                             targets: '.anime-target',
                             translateY: [40, 0],
@@ -570,10 +567,9 @@
             });
         });
 
-        // Evento global para inicializar audio al primer tap (Browsers requieren interacción)
         document.body.addEventListener('pointerdown', initAudio, { once: true });
 
-        // --- 1. CONFIGURACIÓN THREE.JS (Highcoon Head 3D Gigante) ---
+        // --- 1. CONFIGURACIÓN THREE.JS ---
         const canvasContainer = document.getElementById('sgx-canvas');
         const scene = new THREE.Scene();
         
@@ -600,16 +596,15 @@
                 color: 0xfdcc0d, 
                 wireframe: true, 
                 transparent: true, 
-                opacity: 0.25 // Un poco más transparente para no opacar el texto
+                opacity: 0.25 
             });
 
             highcoonHead.traverse((child) => {
                 if (child.isMesh) child.material = wireframeMaterial;
             });
 
-            // Hacerlo MUCHO MÁS GRANDE
             highcoonHead.scale.set(3.8, 3.8, 3.8); 
-            highcoonHead.position.y = -1.5; // Bajarlo para centrar
+            highcoonHead.position.y = -1.5; 
             scene.add(highcoonHead);
 
         });
@@ -649,10 +644,9 @@
         const modal = document.getElementById('secret-modal');
         const modalBox = document.getElementById('modal-box');
         const scoreDisplay = document.getElementById('score-display');
-        const rewardCodeBox = document.getElementById('reward-code-box'); // Capturamos la caja del código
+        const rewardCodeBox = document.getElementById('reward-code-box'); 
         let gameActive = true;
 
-        // Función para generar código aleatorio
         function generateRandomAuthCode() {
             const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
             let result = 'SGX-';
@@ -677,7 +671,7 @@
             sphere.addEventListener('pointerdown', (e) => {
                 if (!gameActive) return;
                 
-                playSphereChime(); // Audio feedback
+                playSphereChime(); 
 
                 sphere.style.transition = 'all 0.15s';
                 sphere.style.transform = 'scale(0)';
@@ -687,7 +681,6 @@
 
                 score++;
                 
-                // Mostrar tracker brevemente
                 scoreDisplay.innerText = `${score}/${maxScore}`;
                 scoreDisplay.style.opacity = '1';
                 setTimeout(() => { if(gameActive) scoreDisplay.style.opacity = '0'; }, 2000);
@@ -703,21 +696,19 @@
             setTimeout(() => { if (sphere.parentElement) sphere.remove(); }, duration * 1000);
         }
 
-        setInterval(spawnSphere, 2200); // Salen esferas
+        setInterval(spawnSphere, 2200); 
 
         function triggerReward() {
             gameActive = false;
             scoreDisplay.style.opacity = '0';
             gameLayer.innerHTML = '';
             
-            // Generar y asignar el nuevo código random antes de abrir el modal
             rewardCodeBox.innerText = generateRandomAuthCode();
 
             modal.style.pointerEvents = 'auto';
             modal.style.opacity = '1';
             modalBox.style.transform = 'scale(1)';
             
-            // Audio de victoria
             if(audioCtx) {
                 playSphereChime();
                 setTimeout(playSphereChime, 150);
@@ -733,7 +724,7 @@
             setTimeout(() => { gameActive = true; }, 1000);
         }
 
-        // --- 3. ANIMACIONES UI ---
+        // --- 3. ANIMACIONES UI (FIX DE ALTURA Y SCROLL) ---
         const sections = document.querySelectorAll('.guild-section');
         sections.forEach(section => {
             const header = section.querySelector('.section-header');
@@ -747,8 +738,13 @@
                 sections.forEach(s => {
                     if (s.classList.contains('active')) {
                         s.classList.remove('active');
+                        const sc = s.querySelector('.section-content');
+                        
+                        // FIX: Congelar la altura actual antes de animar a 0 para que no salte feo
+                        sc.style.height = sc.offsetHeight + 'px';
+                        
                         anime({
-                            targets: s.querySelector('.section-content'),
+                            targets: sc,
                             height: 0,
                             duration: 350,
                             easing: 'easeInOutQuad'
@@ -758,14 +754,20 @@
 
                 // Abrir actual
                 if (!isActive) {
-                    playUIBeep(); // Audio feedback UI
+                    playUIBeep(); 
                     section.classList.add('active');
-                    const height = inner.offsetHeight;
+                    
+                    const targetHeight = inner.offsetHeight;
+                    
                     anime({
                         targets: content,
-                        height: [0, height],
+                        height: [0, targetHeight],
                         duration: 400,
-                        easing: 'easeOutQuart'
+                        easing: 'easeOutQuart',
+                        complete: function() {
+                            // FIX: Dejar la altura en 'auto' para que el texto respire y nunca se corte
+                            content.style.height = 'auto';
+                        }
                     });
                     if (navigator.vibrate) navigator.vibrate(15);
                 }
