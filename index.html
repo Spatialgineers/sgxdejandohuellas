@@ -3,777 +3,142 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SGX Guild | Terminal de Iniciado</title>
-    
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
-
-    <elevenlabs-convai agent-id="agent_01jzta15r6ex3bcpfhnzszrw17"></elevenlabs-convai>
-    <script src="https://unpkg.com/@elevenlabs/convai-widget-embed" async type="text/javascript"></script>
-
+    <title>SGX Immersive Experience</title>
+    <!-- Core Engine: A-Frame -->
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        :root {
-            /* BRANDING SGX OFICIAL */
-            --sgx-yellow: #fdcc0d;
-            --sgx-blue: #32527b;
-            --sgx-grey: #888888;
-            --sgx-dark-bg: #05080f;
-            --sgx-glass: rgba(50, 82, 123, 0.6);
-            --sgx-border: rgba(253, 204, 13, 0.6);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        body {
-            background-color: var(--sgx-dark-bg);
-            color: #ffffff;
-            font-family: 'Inter', sans-serif;
-            overflow-x: hidden;
-            overscroll-behavior: none;
-        }
-
-        /* --- PANTALLA DE CARGA (BOOT SEQUENCE) --- */
-        #boot-screen {
-            position: fixed;
-            top: 0; left: 0; width: 100vw; height: 100vh;
-            background-color: #000;
-            z-index: 9999;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            padding: 40px;
-            font-family: 'Space Grotesk', monospace;
-            color: var(--sgx-yellow);
-        }
-
-        .log-line {
-            font-size: 1rem;
-            margin-bottom: 8px;
-            opacity: 0;
-        }
-
-        /* --- CAPA 3D --- */
-        #sgx-canvas {
-            position: fixed;
-            top: 0; left: 0; width: 100vw; height: 100vh;
-            z-index: 0;
-            pointer-events: none; 
-        }
-
-        /* --- CAPA DEL JUEGO (Z-INDEX ALTO PARA CLICK) --- */
-        #minigame-layer {
-            position: fixed;
-            top: 0; left: 0; width: 100vw; height: 100vh;
-            z-index: 50; 
-            pointer-events: none; 
-        }
-
-        .energy-sphere {
+        body, html { margin: 0; padding: 0; overflow: hidden; background-color: #050505; width: 100%; height: 100%; font-family: monospace; }
+        /* Posición global del botón VR por defecto en Quest */
+        .a-enter-vr { bottom: 20px !important; right: 20px !important; z-index: 10000; }
+        
+        /* SGX Standalone Controls UI */
+        #sgx-controls {
             position: absolute;
-            width: 70px;
-            height: 70px;
-            background-image: url('https://static.wixstatic.com/media/fe81a7_080e1efa8bb24e43bd8b503e557565b8~mv2.png');
-            background-size: cover;
-            background-position: center;
-            border-radius: 50%;
-            pointer-events: auto; 
-            cursor: pointer;
-            transition: transform 0.1s;
-            animation: floatUp 6s linear infinite;
-        }
-
-        .energy-sphere:active {
-            transform: scale(0.6);
-        }
-
-        @keyframes floatUp {
-            0% { transform: translateY(110vh) rotate(0deg); opacity: 0; }
-            10% { opacity: 0.9; }
-            90% { opacity: 0.9; }
-            100% { transform: translateY(-10vh) rotate(360deg); opacity: 0; }
-        }
-
-        /* --- MODAL SECRETO --- */
-        #secret-modal {
-            position: fixed;
-            top: 0; left: 0; width: 100vw; height: 100vh;
-            background: rgba(5, 8, 15, 0.95);
-            backdrop-filter: blur(15px);
-            z-index: 100;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
             display: flex;
-            justify-content: center;
-            align-items: center;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.5s;
-        }
-
-        .modal-content {
-            background: var(--sgx-glass);
-            border: 2px solid var(--sgx-yellow);
-            padding: 40px 20px;
-            border-radius: 20px;
-            text-align: center;
-            max-width: 90%;
-            width: 400px;
-            box-shadow: 0 0 40px rgba(253, 204, 13, 0.15);
-            transform: scale(0.8);
-            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            pointer-events: auto;
-        }
-
-        .modal-content h2 {
-            font-family: 'Space Grotesk', sans-serif;
-            color: var(--sgx-yellow);
-            margin-bottom: 15px;
-            font-size: 1.8rem;
-        }
-
-        .code-box {
-            background: rgba(0,0,0,0.6);
-            border: 1px dashed var(--sgx-grey);
-            padding: 15px;
-            font-family: monospace;
-            font-size: 1.5rem;
-            color: #fff;
-            letter-spacing: 2px;
-            margin: 20px 0;
-            border-radius: 8px;
-            user-select: all; 
-        }
-
-        /* --- INTERFAZ PRINCIPAL --- */
-        #ui-layer {
-            position: relative;
-            z-index: 10;
-            width: 100%;
-            height: 100vh;
-            overflow-y: auto;
-            /* FIX DE SCROLL: Ahora permite interactuar con toda la pantalla */
-            pointer-events: auto; 
-        }
-
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 40px 20px 150px 20px;
-        }
-
-        header {
-            text-align: center;
-            margin-bottom: 50px;
-            visibility: hidden; 
-        }
-
-        .badge {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            color: var(--sgx-yellow);
-            border: 1px solid var(--sgx-yellow);
-            padding: 6px 12px;
-            border-radius: 50px;
-            display: inline-block;
-            margin-bottom: 15px;
-            background: rgba(253, 204, 13, 0.1);
-        }
-
-        h1 {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 2.8rem;
-            font-weight: 800;
-            color: #ffffff;
-            line-height: 1.1;
-            margin-bottom: 10px;
-            text-shadow: 0 4px 15px rgba(50, 82, 123, 0.8);
-        }
-
-        p.subtitle {
-            color: var(--sgx-grey);
-            font-size: 1.2rem;
-            font-weight: 400;
-        }
-
-        /* Acordeón */
-        .guild-section {
-            background: var(--sgx-glass);
+            gap: 20px;
+            z-index: 9999;
+            background: rgba(17, 17, 17, 0.85);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
-            border: 1px solid var(--sgx-border);
-            border-radius: 12px;
-            margin-bottom: 15px;
-            overflow: hidden;
-            transition: all 0.3s ease;
-            visibility: hidden; 
+            padding: 12px 24px;
+            border-radius: 100px;
+            border: 1px solid rgba(253, 204, 13, 0.4);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            transition: opacity 0.3s;
         }
-
-        .guild-section.active {
-            border-color: var(--sgx-yellow);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 0 20px rgba(253, 204, 13, 0.05);
-        }
-
-        .section-header {
-            padding: 24px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            cursor: pointer;
-            user-select: none;
-        }
-
-        .section-title {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 1.1rem;
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .section-title span {
-            color: var(--sgx-yellow);
-            font-size: 0.9rem;
-        }
-
-        .icon-cross {
-            position: relative;
-            width: 14px; height: 14px;
-        }
-
-        .icon-cross::before, .icon-cross::after {
-            content: ''; position: absolute; background-color: var(--sgx-grey);
-            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .icon-cross::before { top: 6px; left: 0; width: 14px; height: 2px; }
-        .icon-cross::after { top: 0; left: 6px; width: 2px; height: 14px; }
-
-        .active .icon-cross::after { transform: rotate(90deg); }
-        .active .icon-cross::before { transform: rotate(180deg); background-color: var(--sgx-yellow); }
-
-        .section-content {
-            height: 0;
-            overflow: hidden;
-            padding: 0 24px;
-            color: #d1d5db;
-            font-size: 0.95rem;
-            line-height: 1.6;
-        }
-
-        .content-inner { padding-bottom: 24px; }
-
-        h3 {
-            color: var(--sgx-yellow);
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 1rem;
-            margin: 20px 0 10px 0;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        ul { list-style: none; margin-bottom: 15px; }
-        li { position: relative; padding-left: 15px; margin-bottom: 12px; }
-        li::before {
-            content: ''; position: absolute; left: 0; top: 8px; width: 4px; height: 4px;
-            background: var(--sgx-yellow); border-radius: 50%;
-        }
-
-        .highlight { color: #ffffff; font-weight: 600; }
-        
-        .btn-close {
-            background: var(--sgx-yellow);
-            color: var(--sgx-dark-bg);
+        .ctrl-btn {
+            background: transparent;
             border: none;
-            padding: 10px 20px;
-            font-family: 'Space Grotesk', sans-serif;
-            font-weight: bold;
-            border-radius: 8px;
+            color: white;
+            font-size: 20px;
             cursor: pointer;
-            margin-top: 15px;
-        }
-
-        .score-tracker {
-            position: fixed; top: 20px; right: 20px;
-            font-family: 'Space Grotesk', sans-serif; color: var(--sgx-yellow);
-            font-size: 1.2rem; z-index: 60; opacity: 0; transition: opacity 0.3s;
-        }
-
-        /* --- BOTONES DE ACCIÓN (CTAs) --- */
-        .action-buttons {
+            outline: none;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
             display: flex;
-            flex-direction: column;
-            gap: 15px;
-            margin-top: 40px;
-            visibility: hidden; 
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
         }
-
-        .btn-main {
-            background: var(--sgx-yellow);
-            color: var(--sgx-dark-bg);
-            text-decoration: none;
-            text-align: center;
-            padding: 18px 20px;
-            font-family: 'Space Grotesk', sans-serif;
-            font-weight: 800;
-            font-size: 1.1rem;
-            border-radius: 8px;
-            text-transform: uppercase;
-            box-shadow: 0 0 20px rgba(253, 204, 13, 0.4);
-            transition: transform 0.2s, box-shadow 0.2s;
+        .ctrl-btn:hover {
+            background: rgba(253, 204, 13, 0.2);
+            color: #FDCC0D;
         }
-
-        .btn-main:active {
-            transform: scale(0.96);
+        .ctrl-active {
+            color: #FDCC0D;
         }
-
-        .btn-social {
-            background: rgba(5, 8, 15, 0.8);
-            color: #ffffff;
-            text-decoration: none;
-            text-align: center;
-            padding: 15px 20px;
-            font-family: 'Space Grotesk', sans-serif;
-            font-weight: 600;
-            font-size: 1rem;
-            border: 1px solid var(--sgx-blue);
-            border-radius: 8px;
-            transition: all 0.2s;
-        }
-
-        .btn-social:active {
-            transform: scale(0.96);
-            background: var(--sgx-glass);
-        }
-
     </style>
 </head>
 <body>
 
-    <div id="boot-screen">
-        <div class="log-line">SGX_OS v3.1 initializing...</div>
-        <div class="log-line">Loading Spatial Mesh...</div>
-        <div class="log-line">Connecting to Highcoon Neural Net...</div>
-        <div class="log-line" style="color: #fff;">>> SYSTEM READY</div>
-    </div>
-
-    <div id="sgx-canvas"></div>
-
-    <div class="score-tracker" id="score-display">0/10</div>
-
-    <div id="minigame-layer"></div>
-
-    <div id="secret-modal">
-        <div class="modal-content" id="modal-box">
-            <h2>¡EASTER EGG ENCONTRADO!</h2>
-            <p style="color: var(--sgx-grey);">Has recolectado 10 esferas de energía. Tu curiosidad espacial ha sido recompensada.</p>
-            <p style="margin-top: 15px;">Guarda este código de autorización único y preséntalo para ganar el derecho a una <strong style="color: #fff;">Galería Virtual (Tier 2)</strong>.</p>
-            <div class="code-box" id="reward-code-box">GENERANDO...</div>
-            <button class="btn-close" onclick="closeModal()">ACEPTAR RECOMPENSA</button>
-        </div>
-    </div>
-
-    <div id="ui-layer">
-        <div class="container">
-            
-            <header class="anime-target">
-                <div class="badge">Spatialgineers OS</div>
-                <h1>EL GRIMORIO</h1>
-                <p class="subtitle">Ingeniando imaginación, construyendo realidades</p>
-            </header>
-
-            <div class="guild-section anime-target">
-                <div class="section-header">
-                    <div class="section-title"><span>01</span> El Espíritu Nakama</div>
-                    <div class="icon-cross"></div>
-                </div>
-                <div class="section-content">
-                    <div class="content-inner">
-                        <p>En la Gran Era de los Piratas, el Capitán reunió a su tripulación porque cada uno tenía un sueño monumental que cumplir. Ese es el corazón del <span class="highlight">SGX Guild System</span>.</p>
-                        <p style="margin-top: 10px;">Este no es un internado tradicional. Es un <span class="highlight">"Isekai" profesional</span> donde te damos las herramientas para que construyas tu portafolio y tu futuro. Queremos ser el <em>stepping stone</em> en tu carrera tecnológica.</p>
-                        <h3>Tus Guild Masters</h3>
-                        <ul>
-                            <li><span class="highlight">Danelson (CEO):</span> Guild Master de Visión. Traza el mapa, conceptualiza y dirige el arte.</li>
-                            <li><span class="highlight">Ricardo (CPO):</span> Guild Master de Tecnología. Domina la viabilidad tecnológica, optimización (el mesh), código y rigging.</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-
-            <div class="guild-section anime-target">
-                <div class="section-header">
-                    <div class="section-title"><span>02</span> Las 6 Magias (Afinidades)</div>
-                    <div class="icon-cross"></div>
-                </div>
-                <div class="section-content">
-                    <div class="content-inner">
-                        <p>Al entrar, declararás tu Afinidad de Pilar para enfocar tu desarrollo:</p>
-                        <ul>
-                            <li><span class="highlight">Spark (Interactores):</span> Desarrollo de mecánicas de juego, laberintos y gamificación.</li>
-                            <li><span class="highlight">Stage (Showrunners):</span> Producción de experiencias en vivo, eventos híbridos y visualizadores.</li>
-                            <li><span class="highlight">Showcase (Arquitectos):</span> Arquitectura virtual, digital twins y entornos 3D fotorrealistas.</li>
-                            <li><span class="highlight">Story (Loremasters):</span> Narrativa, guiones, diseño sonoro y cine inmersivo 360.</li>
-                            <li><span class="highlight">System (Code Weavers):</span> Integraciones WebApp, IA y Manufactura 3D.</li>
-                            <li><span class="highlight" style="color: var(--sgx-yellow);">Synthesize (Magos del Futuro):</span> Proyectos Enterprise élite que unifican pilares.</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-
-            <div class="guild-section anime-target">
-                <div class="section-header">
-                    <div class="section-title"><span>03</span> Rank-Up System</div>
-                    <div class="icon-cross"></div>
-                </div>
-                <div class="section-content">
-                    <div class="content-inner">
-                        <p>Tu progreso dicta tu poder. El viaje comienza desde abajo:</p>
-                        <ul>
-                            <li><span class="highlight">F - Initiate:</span> Estudiante ganando créditos. Absorbirás el pipeline SGX y completarás tu Capstone.</li>
-                            <li><span class="highlight">E - Awakened Initiate:</span> Has demostrado nivel. Tienes autonomía en sub-tareas del estudio.</li>
-                            <li><span class="highlight">D - Specialist:</span> Entras a la base de talento. Acceso al <em>Quest Board</em> para ganar <strong>Bounties ($)</strong>.</li>
-                            <li><span class="highlight">C - Master Specialist:</span> Talento avanzado capaz de ejecutar quests con mínima supervisión.</li>
-                            <li><span class="highlight">B - Veteran:</span> Talento de élite bajo NDA para misiones secretas de clientes.</li>
-                            <li><span class="highlight">A - Pillar Captain:</span> Director de División que lidera a los rangos inferiores.</li>
-                            <li><span class="highlight" style="color: var(--sgx-yellow);">S - Spatialgineer:</span> La Cúspide Absoluta. Rango de Maestros.</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-
-            <div class="guild-section anime-target">
-                <div class="section-header">
-                    <div class="section-title"><span>04</span> Misiones y Exámenes</div>
-                    <div class="icon-cross"></div>
-                </div>
-                <div class="section-content">
-                    <div class="content-inner">
-                        <h3>Origen de tu Misión</h3>
-                        <ul>
-                            <li><span class="highlight">Assigned Capstone:</span> Proyecto maestro asignado basado en tu Afinidad.</li>
-                            <li><span class="highlight">The Pitch:</span> Si tienes una idea original, preséntala. Si se aprueba, usamos recursos SGX para hacerla real.</li>
-                        </ul>
-                        <h3>The Skill Tree (Rank-Up Exam)</h3>
-                        <p>Al final del semestre, presentas resultados para subir de Rango evaluando:</p>
-                        <ul>
-                            <li><span class="highlight">Technical Skill:</span> Tu dominio bruto de las herramientas.</li>
-                            <li><span class="highlight">Engineering Rigor:</span> Optimización de peso y que la experiencia fluya a altos FPS.</li>
-                            <li><span class="highlight">Narrative & Vision:</span> Capacidad de crear un diseño cohesivo y emocional.</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-
-            <div class="guild-section anime-target">
-                <div class="section-header">
-                    <div class="section-title"><span>05</span> El Pacto del Gremio (IP)</div>
-                    <div class="icon-cross"></div>
-                </div>
-                <div class="section-content">
-                    <div class="content-inner">
-                        <p style="margin-bottom: 15px;"><strong style="color: var(--sgx-yellow); font-size: 1.1rem;">TÚ ERES DUEÑO DE TUS SUEÑOS.</strong></p>
-                        <p>Creemos en el intercambio equivalente. Si desarrollas un proyecto original (Pitch) desde cero, tú retienes la autoría de tu arte, historia y personajes.</p>
-                        <br>
-                        <p>A través de nuestros Acuerdos, <span class="highlight">Spatialgineers retiene el control de los códigos base, lógica backend y templates</span>. Nosotros proveemos el motor que hace que tu magia funcione. Si la idea se comercializa, operaremos juntos para que recibas tu porción del botín.</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="action-buttons anime-target">
-                <a href="https://spatialgineers.com/guild" target="_blank" class="btn-main">ÚNETE AL GUILD (Aplica Aquí)</a>
-                <a href="https://www.instagram.com/spatialgineers/" target="_blank" class="btn-social">Síguenos en Instagram</a>
-            </div>
-
-        </div>
-    </div>
-
-    <script>
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        let audioCtx;
-
-        function initAudio() {
-            if (!audioCtx) audioCtx = new AudioContext();
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-        }
-
-        function playUIBeep() {
-            if (!audioCtx) return;
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.type = 'square';
-            osc.frequency.setValueAtTime(400, audioCtx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.05);
-            gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.start();
-            osc.stop(audioCtx.currentTime + 0.1);
-        }
-
-        function playSphereChime() {
-            if (!audioCtx) return;
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(880, audioCtx.currentTime); 
-            osc.frequency.setValueAtTime(1760, audioCtx.currentTime + 0.1); 
-            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.start();
-            osc.stop(audioCtx.currentTime + 0.3);
-        }
-    </script>
-
-    <script>
-        // --- 0. BOOT SEQUENCE ---
-        document.addEventListener("DOMContentLoaded", () => {
-            const lines = document.querySelectorAll('.log-line');
-            const bootScreen = document.getElementById('boot-screen');
-            
-            anime({
-                targets: lines,
-                opacity: 1,
-                translateY: [10, 0],
-                delay: anime.stagger(400),
-                easing: 'easeOutExpo',
-                complete: function() {
-                    setTimeout(() => {
-                        bootScreen.style.display = 'none';
-                        document.querySelector('header').style.visibility = 'visible';
-                        document.querySelectorAll('.guild-section').forEach(el => el.style.visibility = 'visible');
-                        document.querySelector('.action-buttons').style.visibility = 'visible';
-                        
-                        anime({
-                            targets: '.anime-target',
-                            translateY: [40, 0],
-                            opacity: [0, 1],
-                            delay: anime.stagger(150),
-                            easing: 'easeOutExpo',
-                            duration: 1200
-                        });
-                    }, 800);
-                }
-            });
-        });
-
-        document.body.addEventListener('pointerdown', initAudio, { once: true });
-
-        // --- 1. CONFIGURACIÓN THREE.JS ---
-        const canvasContainer = document.getElementById('sgx-canvas');
-        const scene = new THREE.Scene();
+    <a-scene loading-screen="dotsColor: #FDCC0D; backgroundColor: #050505" 
+             renderer="antialias: true; colorManagement: true;"
+             vr-mode-ui="enabled: true">
         
-        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.z = 5;
+        <a-assets>
+            <video id="media-content" crossorigin="anonymous" playsinline webkit-playsinline loop muted autoplay preload="auto">
+                <source src="https://video.wixstatic.com/video/fe81a7_42c5ca1b4fa347dd93777a4aa77c83df/1080p/mp4/file.mp4" type="video/mp4">
+            </video>
+        </a-assets>
 
-        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        canvasContainer.appendChild(renderer.domElement);
+        <a-videosphere src="#media-content" rotation="0 -90 0"></a-videosphere>
+        
+        <!-- Rotación Cinemática Suave -->
+        <a-entity id="rig" animation="property: rotation; to: 0 -360 0; loop: true; dur: 120000; easing: linear;">
+            <a-entity camera look-controls="reverseMouseDrag: true" position="0 1.6 0"></a-entity>
+        </a-entity>
 
-        let highcoonHead = null;
-        let mouseX = 0; let mouseY = 0;
-        const windowHalfX = window.innerWidth / 2;
-        const windowHalfY = window.innerHeight / 2;
+    </a-scene>
+    
+    <!-- Controles Flotantes SGX (Desaparecen en VR) -->
+    <div id="sgx-controls">
+        <button id="btn-play" class="ctrl-btn"><i class="fas fa-pause"></i></button>
+        <button id="btn-mute" class="ctrl-btn"><i class="fas fa-volume-mute"></i></button>
+    </div>
 
-        const loader = new THREE.GLTFLoader();
-        const modelUrl = 'https://static.wixstatic.com/3d/fe81a7_cf1ed4e58d0048efa955f39d347a9466.glb';
-
-        loader.load(modelUrl, function(gltf) {
-            highcoonHead = gltf.scene;
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const mediaEl = document.getElementById('media-content');
+            const sceneEl = document.querySelector('a-scene');
+            const controlsUI = document.getElementById('sgx-controls');
             
-            const wireframeMaterial = new THREE.MeshBasicMaterial({ 
-                color: 0xfdcc0d, 
-                wireframe: true, 
-                transparent: true, 
-                opacity: 0.25 
+            // Ocultar controles al entrar en modo inmersivo (Meta Quest)
+            sceneEl.addEventListener('enter-vr', () => {
+                if(controlsUI) controlsUI.style.display = 'none';
             });
-
-            highcoonHead.traverse((child) => {
-                if (child.isMesh) child.material = wireframeMaterial;
-            });
-
-            highcoonHead.scale.set(3.8, 3.8, 3.8); 
-            highcoonHead.position.y = -1.5; 
-            scene.add(highcoonHead);
-
-        });
-
-        document.addEventListener('mousemove', (event) => {
-            mouseX = (event.clientX - windowHalfX) / windowHalfX;
-            mouseY = (event.clientY - windowHalfY) / windowHalfY;
-        });
-
-        document.addEventListener('touchmove', (event) => {
-            mouseX = (event.touches[0].clientX - windowHalfX) / windowHalfX;
-            mouseY = (event.touches[0].clientY - windowHalfY) / windowHalfY;
-        });
-
-        function animate3D() {
-            requestAnimationFrame(animate3D);
-            if (highcoonHead) {
-                const targetRotationX = mouseY * 0.4;
-                const targetRotationY = mouseX * 0.6;
-                highcoonHead.rotation.x += (targetRotationX - highcoonHead.rotation.x) * 0.05;
-                highcoonHead.rotation.y += (targetRotationY - highcoonHead.rotation.y) * 0.05;
-            }
-            renderer.render(scene, camera);
-        }
-        animate3D();
-
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-
-        // --- 2. EL MINI-JUEGO GAMIFICADO ---
-        let score = 0;
-        const maxScore = 10;
-        const gameLayer = document.getElementById('minigame-layer');
-        const modal = document.getElementById('secret-modal');
-        const modalBox = document.getElementById('modal-box');
-        const scoreDisplay = document.getElementById('score-display');
-        const rewardCodeBox = document.getElementById('reward-code-box'); 
-        let gameActive = true;
-
-        function generateRandomAuthCode() {
-            const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-            let result = 'SGX-';
-            for (let i = 0; i < 6; i++) {
-                result += characters.charAt(Math.floor(Math.random() * characters.length));
-            }
-            return result;
-        }
-
-        function spawnSphere() {
-            if (!gameActive) return;
-
-            const sphere = document.createElement('div');
-            sphere.classList.add('energy-sphere');
-            
-            const randomX = Math.random() * 80 + 10;
-            sphere.style.left = `${randomX}vw`;
-            
-            const duration = Math.random() * 3 + 5; 
-            sphere.style.animationDuration = `${duration}s`;
-
-            sphere.addEventListener('pointerdown', (e) => {
-                if (!gameActive) return;
-                
-                playSphereChime(); 
-
-                sphere.style.transition = 'all 0.15s';
-                sphere.style.transform = 'scale(0)';
-                sphere.style.opacity = '0';
-                
-                if (navigator.vibrate) navigator.vibrate(30);
-
-                score++;
-                
-                scoreDisplay.innerText = `${score}/${maxScore}`;
-                scoreDisplay.style.opacity = '1';
-                setTimeout(() => { if(gameActive) scoreDisplay.style.opacity = '0'; }, 2000);
-                
-                setTimeout(() => sphere.remove(), 200);
-
-                if (score >= maxScore) {
-                    triggerReward();
+            sceneEl.addEventListener('exit-vr', () => {
+                if(controlsUI) controlsUI.style.display = 'flex';
+                // Forzar reproducción al salir para evitar pausas indeseadas
+                if(mediaEl && mediaEl.tagName === 'VIDEO' && !mediaEl.paused) {
+                    mediaEl.play().catch(e => console.warn(e));
                 }
             });
 
-            gameLayer.appendChild(sphere);
-            setTimeout(() => { if (sphere.parentElement) sphere.remove(); }, duration * 1000);
-        }
+            if(mediaEl && mediaEl.tagName === 'VIDEO') {
+                const btnPlay = document.getElementById('btn-play');
+                const btnMute = document.getElementById('btn-mute');
+                let isPlaying = false;
 
-        setInterval(spawnSphere, 2200); 
+                // Forzar arranque inicial (Autoplay en móviles requiere interacción a veces)
+                mediaEl.play().then(() => {
+                    isPlaying = true;
+                    btnPlay.innerHTML = '<i class="fas fa-pause"></i>';
+                }).catch(error => {
+                    console.log("Sistema bloqueando autoplay. Requiere interacción.", error);
+                    btnPlay.innerHTML = '<i class="fas fa-play"></i>';
+                });
 
-        function triggerReward() {
-            gameActive = false;
-            scoreDisplay.style.opacity = '0';
-            gameLayer.innerHTML = '';
-            
-            rewardCodeBox.innerText = generateRandomAuthCode();
-
-            modal.style.pointerEvents = 'auto';
-            modal.style.opacity = '1';
-            modalBox.style.transform = 'scale(1)';
-            
-            if(audioCtx) {
-                playSphereChime();
-                setTimeout(playSphereChime, 150);
-                setTimeout(playSphereChime, 300);
-            }
-        }
-
-        function closeModal() {
-            modal.style.opacity = '0';
-            modal.style.pointerEvents = 'none';
-            modalBox.style.transform = 'scale(0.8)';
-            score = 0; 
-            setTimeout(() => { gameActive = true; }, 1000);
-        }
-
-        // --- 3. ANIMACIONES UI (FIX DE ALTURA Y SCROLL) ---
-        const sections = document.querySelectorAll('.guild-section');
-        sections.forEach(section => {
-            const header = section.querySelector('.section-header');
-            const content = section.querySelector('.section-content');
-            const inner = section.querySelector('.content-inner');
-
-            header.addEventListener('pointerdown', () => {
-                const isActive = section.classList.contains('active');
-                
-                // Cerrar todos
-                sections.forEach(s => {
-                    if (s.classList.contains('active')) {
-                        s.classList.remove('active');
-                        const sc = s.querySelector('.section-content');
-                        
-                        // FIX: Congelar la altura actual antes de animar a 0 para que no salte feo
-                        sc.style.height = sc.offsetHeight + 'px';
-                        
-                        anime({
-                            targets: sc,
-                            height: 0,
-                            duration: 350,
-                            easing: 'easeInOutQuad'
-                        });
+                // Lógica Botón Play/Pause
+                btnPlay.addEventListener('click', () => {
+                    if (mediaEl.paused) {
+                        mediaEl.play();
+                        isPlaying = true;
+                        btnPlay.innerHTML = '<i class="fas fa-pause"></i>';
+                    } else {
+                        mediaEl.pause();
+                        isPlaying = false;
+                        btnPlay.innerHTML = '<i class="fas fa-play"></i>';
                     }
                 });
 
-                // Abrir actual
-                if (!isActive) {
-                    playUIBeep(); 
-                    section.classList.add('active');
-                    
-                    const targetHeight = inner.offsetHeight;
-                    
-                    anime({
-                        targets: content,
-                        height: [0, targetHeight],
-                        duration: 400,
-                        easing: 'easeOutQuart',
-                        complete: function() {
-                            // FIX: Dejar la altura en 'auto' para que el texto respire y nunca se corte
-                            content.style.height = 'auto';
-                        }
-                    });
-                    if (navigator.vibrate) navigator.vibrate(15);
-                }
-            });
+                // Lógica Botón Mute/Unmute
+                btnMute.addEventListener('click', () => {
+                    mediaEl.muted = !mediaEl.muted;
+                    if (mediaEl.muted) {
+                        btnMute.innerHTML = '<i class="fas fa-volume-mute"></i>';
+                        btnMute.classList.remove('ctrl-active');
+                    } else {
+                        btnMute.innerHTML = '<i class="fas fa-volume-up"></i>';
+                        btnMute.classList.add('ctrl-active');
+                    }
+                });
+            }
         });
-
     </script>
 </body>
 </html>
