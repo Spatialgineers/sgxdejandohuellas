@@ -3,142 +3,404 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SGX Immersive Experience</title>
-    <!-- Core Engine: A-Frame -->
+    <title>SGX // PUERTO RICO 360 MASTER ENGINE</title>
+    
+    <!-- Taildwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Leaflet CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- A-Frame (WebXR Framework) -->
     <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- SGX Brand Config -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        sgxblue: '#32527B',
+                        sgxyellow: '#FDCC0D',
+                        sgxmetal: '#1A1A1A',
+                        sgxcyan: '#00FFFF',
+                        sgxblack: '#050505',
+                        sgxcopper: '#B87333'
+                    },
+                    fontFamily: {
+                        mono: ['Orbitron', 'sans-serif'],
+                        sans: ['Rajdhani', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
     <style>
-        body, html { margin: 0; padding: 0; overflow: hidden; background-color: #050505; width: 100%; height: 100%; font-family: monospace; }
-        /* Posición global del botón VR por defecto en Quest */
-        .a-enter-vr { bottom: 20px !important; right: 20px !important; z-index: 10000; }
+        *, *::before, *::after { box-sizing: border-box; }
         
-        /* SGX Standalone Controls UI */
-        #sgx-controls {
-            position: absolute;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 20px;
-            z-index: 9999;
-            background: rgba(17, 17, 17, 0.85);
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100dvh; 
+            background-color: #050505; overflow: hidden;
+            font-family: 'Rajdhani', sans-serif;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        /* Glassmorphism SGX */
+        .glass-panel {
+            background: rgba(10, 10, 10, 0.85);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
-            padding: 12px 24px;
-            border-radius: 100px;
-            border: 1px solid rgba(253, 204, 13, 0.4);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            transition: opacity 0.3s;
+            border: 1px solid rgba(50, 82, 123, 0.6);
+            box-shadow: 0 0 25px rgba(0,0,0,0.9);
         }
-        .ctrl-btn {
-            background: transparent;
-            border: none;
-            color: white;
-            font-size: 20px;
-            cursor: pointer;
-            outline: none;
-            width: 45px;
-            height: 45px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s ease;
+
+        .clip-45 { clip-path: polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px); }
+        .clip-45-bottom { clip-path: polygon(0 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%); }
+
+        /* Capas Base */
+        #map-engine {
+            position: absolute; inset: 0; z-index: 10;
+            background: #050505; transition: opacity 0.4s ease;
         }
-        .ctrl-btn:hover {
-            background: rgba(253, 204, 13, 0.2);
-            color: #FDCC0D;
+        
+        /* Contenedor Vacío para el 3D - Cero Consumo de RAM al iniciar */
+        #vr-container {
+            position: absolute; inset: 0; z-index: 5;
+            background: #000;
         }
-        .ctrl-active {
-            color: #FDCC0D;
+
+        #vr-hud {
+            position: absolute; inset: 0; z-index: 50;
+            pointer-events: none; /* Traspasa toques al Canvas de A-Frame */
+            opacity: 0; transition: opacity 0.4s ease;
+        }
+
+        .hud-interactive { pointer-events: auto; } /* Reactiva toques solo en botones */
+
+        /* A-Frame UI Overrides */
+        .a-enter-vr { bottom: 30px !important; right: 20px !important; z-index: 9999 !important; }
+
+        /* Leaflet Dark Hack */
+        .leaflet-layer, .leaflet-control-zoom-in, .leaflet-control-zoom-out, .leaflet-control-attribution {
+            filter: invert(100%) hue-rotate(180deg) brightness(90%) contrast(120%);
+        }
+        .leaflet-popup-content-wrapper { background: #1A1A1A; color: #FFF; border: 1px solid #00FFFF; border-radius: 0; }
+        .leaflet-popup-tip { background: #00FFFF; }
+        .leaflet-popup-content { margin: 10px; font-family: 'Orbitron', sans-serif; font-size: 14px; text-align: center;}
+
+        /* Scanning FX */
+        @keyframes scanline { 0% { transform: translateY(-100%); } 100% { transform: translateY(100vh); } }
+        .scan-effect::after {
+            content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 8px;
+            background: rgba(0, 255, 255, 0.1); box-shadow: 0 0 15px rgba(0,255,255,0.4);
+            animation: scanline 3s linear infinite; pointer-events: none; z-index: 9999;
         }
     </style>
 </head>
-<body>
+<body class="text-white scan-effect">
 
-    <a-scene loading-screen="dotsColor: #FDCC0D; backgroundColor: #050505" 
-             renderer="antialias: true; colorManagement: true;"
-             vr-mode-ui="enabled: true">
-        
-        <a-assets>
-            <video id="media-content" crossorigin="anonymous" playsinline webkit-playsinline loop muted autoplay preload="auto">
-                <source src="https://video.wixstatic.com/video/fe81a7_42c5ca1b4fa347dd93777a4aa77c83df/1080p/mp4/file.mp4" type="video/mp4">
-            </video>
-        </a-assets>
+    <!-- ==================== CAPA 1: MAP ENGINE (LEAFLET) ==================== -->
+    <div id="map-engine" class="flex flex-col w-full h-full">
+        <!-- Táctico Header -->
+        <header class="absolute top-0 left-0 w-full z-[1000] p-4 pointer-events-none">
+            <div class="glass-panel clip-45 p-3 flex justify-between items-center pointer-events-auto max-w-5xl mx-auto">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-sgxblue border border-sgxyellow flex items-center justify-center">
+                        <i class="fa-solid fa-satellite text-sgxyellow text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-mono text-base md:text-xl font-bold tracking-widest m-0 leading-tight">
+                            SGX // PR <span class="text-sgxcyan">360</span>
+                        </h1>
+                        <p class="font-sans text-[10px] text-gray-400 tracking-[0.2em] uppercase">Red Inmersiva: 78 Nodos</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 px-3 py-1 bg-sgxcyan/10 border border-sgxcyan rounded-none clip-45">
+                    <div class="w-2 h-2 rounded-full bg-sgxcyan animate-pulse"></div>
+                    <span class="font-mono text-[10px] text-sgxcyan hidden md:inline">SYSTEM SECURE</span>
+                </div>
+            </div>
+        </header>
 
-        <a-videosphere src="#media-content" rotation="0 -90 0"></a-videosphere>
-        
-        <!-- Rotación Cinemática Suave -->
-        <a-entity id="rig" animation="property: rotation; to: 0 -360 0; loop: true; dur: 120000; easing: linear;">
-            <a-entity camera look-controls="reverseMouseDrag: true" position="0 1.6 0"></a-entity>
-        </a-entity>
+        <!-- Leaflet Canvas -->
+        <div id="map" class="w-full h-full"></div>
 
-    </a-scene>
-    
-    <!-- Controles Flotantes SGX (Desaparecen en VR) -->
-    <div id="sgx-controls">
-        <button id="btn-play" class="ctrl-btn"><i class="fas fa-pause"></i></button>
-        <button id="btn-mute" class="ctrl-btn"><i class="fas fa-volume-mute"></i></button>
+        <!-- Panel Inferior de Inyección -->
+        <div id="poi-panel" class="absolute bottom-0 left-0 w-full z-[1000] p-4 pointer-events-none flex justify-center translate-y-[120%] transition-transform duration-300 ease-out">
+            <div class="glass-panel clip-45-bottom w-full max-w-3xl p-5 pointer-events-auto border-t border-t-sgxyellow">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div class="flex-1">
+                        <span id="poi-badge" class="px-2 py-1 bg-sgxmetal border border-sgxyellow text-[10px] font-mono text-sgxyellow mb-1 inline-block">TARGET AQUIRED</span>
+                        <h2 id="poi-name" class="font-mono text-2xl md:text-3xl text-white font-bold m-0 uppercase mt-1">SISTEMA LISTO</h2>
+                        <p id="poi-desc" class="font-sans text-sm text-gray-300 mt-2 max-w-md leading-snug">Se requiere permiso de giroscopio para la lectura espacial en dispositivos móviles.</p>
+                    </div>
+                    <button id="btn-enter-360" class="w-full md:w-auto px-6 py-4 bg-sgxblue border border-sgxcyan text-white font-mono font-bold text-sm hover:bg-sgxcyan hover:text-sgxblack transition-all shadow-[0_0_15px_rgba(0,255,255,0.3)] flex items-center justify-center gap-2 clip-45 shrink-0 cursor-pointer">
+                        <i class="fa-solid fa-vr-cardboard text-lg"></i> ENLAZAR SENSORES
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
+    <!-- ==================== CAPA 2: CONTENEDOR VR DINÁMICO (LAZY LOAD) ==================== -->
+    <div id="vr-container"></div>
+
+    <!-- ==================== CAPA 3: HUD SOBRE VR ==================== -->
+    <div id="vr-hud" class="hidden flex-col justify-between w-full h-full">
+        <!-- Top HUD -->
+        <div class="p-4 md:p-6 flex justify-between items-start w-full">
+            <button id="btn-back-map" class="hud-interactive glass-panel clip-45 px-5 py-3 text-sgxyellow font-mono text-xs md:text-sm font-bold hover:bg-sgxyellow hover:text-sgxblack transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-sgxblack">
+                <i class="fa-solid fa-xmark text-lg"></i> DESCONECTAR
+            </button>
+            <div id="vr-location-title" class="glass-panel clip-45 px-5 py-2 border-b-2 border-sgxcyan text-right">
+                <h2 class="font-mono text-lg md:text-xl text-sgxcyan font-bold m-0 uppercase tracking-widest" id="vr-title">LOC</h2>
+                <p class="font-sans text-[10px] text-gray-300 uppercase tracking-widest">360 Stream</p>
+            </div>
+        </div>
+
+        <!-- Bottom HUD Controls -->
+        <div class="p-6 flex justify-center w-full pb-12 md:pb-8">
+            <div class="hud-interactive flex gap-6 glass-panel px-6 py-3 clip-45 border border-sgxblue">
+                <button id="btn-play-vr" class="w-12 h-12 rounded-full text-sgxyellow bg-sgxmetal border border-sgxyellow hover:bg-sgxyellow hover:text-sgxblack transition-all flex items-center justify-center text-xl cursor-pointer">
+                    <i class="fas fa-play pl-1"></i>
+                </button>
+                <div class="w-px h-12 bg-sgxblue opacity-50"></div>
+                <button id="btn-mute-vr" class="w-12 h-12 rounded-full text-white bg-sgxmetal border border-white hover:text-sgxcyan hover:border-sgxcyan transition-all flex items-center justify-center text-xl cursor-pointer">
+                    <i class="fas fa-volume-mute"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== LÓGICA CORE (SGX.SYNTHESIZE) ==================== -->
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const mediaEl = document.getElementById('media-content');
-            const sceneEl = document.querySelector('a-scene');
-            const controlsUI = document.getElementById('sgx-controls');
+        // 1. DATA: LOS 78 MUNICIPIOS DE PUERTO RICO
+        const sgxVideoUrl = "https://video.wixstatic.com/video/fe81a7_43b5f0392f21460b936562ecf6c2422b/1080p/mp4/file.mp4";
+        
+        const prMunicipalitiesData = [
+            ["Adjuntas", 18.1628, -66.7221], ["Aguada", 18.3794, -67.1882], ["Aguadilla", 18.4274, -67.1541],
+            ["Aguas Buenas", 18.2566, -66.1032], ["Aibonito", 18.1399, -66.2660], ["Añasco", 18.2827, -67.1405],
+            ["Arecibo", 18.4724, -66.7157], ["Barceloneta", 18.4505, -66.5385], ["Barranquitas", 18.1866, -66.3060],
+            ["Bayamón", 18.3985, -66.1557], ["Cabo Rojo", 18.0866, -67.1457], ["Caguas", 18.2341, -66.0485],
+            ["Camuy", 18.4838, -66.8449], ["Canóvanas", 18.3791, -65.9007], ["Carolina", 18.3808, -65.9574],
+            ["Cataño", 18.4416, -66.1171], ["Cayey", 18.1119, -66.1660], ["Ceiba", 18.2641, -65.6485],
+            ["Ciales", 18.3361, -66.4688], ["Cidra", 18.1758, -66.1613], ["Coamo", 18.0800, -66.3579],
+            ["Comerío", 18.2185, -66.2254], ["Corozal", 18.3411, -66.3168], ["Culebra", 18.3083, -65.3025],
+            ["Dorado", 18.4588, -66.2677], ["Fajardo", 18.3258, -65.6524], ["Florida", 18.3644, -66.5613],
+            ["Guánica", 17.9716, -66.9079], ["Guayama", 17.9841, -66.1138], ["Guayanilla", 18.0191, -66.7918],
+            ["Guaynabo", 18.3575, -66.1110], ["Gurabo", 18.2544, -65.9729], ["Hatillo", 18.4863, -66.8254],
+            ["Hormigueros", 18.1397, -67.1274], ["Humacao", 18.1497, -65.8274], ["Isabela", 18.5008, -67.0244],
+            ["Jayuya", 18.2186, -66.5916], ["Juana Díaz", 18.0525, -66.5066], ["Juncos", 18.2275, -65.9210],
+            ["Lajas", 18.0500, -67.0500], ["Lares", 18.2947, -66.8771], ["Las Marías", 18.2513, -66.9938],
+            ["Las Piedras", 18.1830, -65.8663], ["Loíza", 18.4313, -65.8802], ["Luquillo", 18.3725, -65.7166],
+            ["Manatí", 18.4274, -66.4921], ["Maricao", 18.1808, -66.9799], ["Maunabo", 18.0072, -65.8993],
+            ["Mayagüez", 18.2011, -67.1396], ["Moca", 18.3947, -67.1132], ["Morovis", 18.3258, -66.4066],
+            ["Naguabo", 18.2116, -65.7349], ["Naranjito", 18.3008, -66.2449], ["Orocovis", 18.2269, -66.3910],
+            ["Patillas", 18.0066, -66.0157], ["Peñuelas", 18.0641, -66.7216], ["Ponce", 18.0111, -66.6141],
+            ["Quebradillas", 18.4738, -66.9385], ["Rincón", 18.3402, -67.2500], ["Río Grande", 18.3797, -65.8316],
+            ["Sabana Grande", 18.0777, -66.9604], ["Salinas", 17.9775, -66.2977], ["San Germán", 18.0811, -67.0406],
+            ["San Juan", 18.4655, -66.1057], ["San Lorenzo", 18.1894, -65.9610], ["San Sebastián", 18.3377, -66.9904],
+            ["Santa Isabel", 17.9658, -66.4052], ["Toa Alta", 18.3883, -66.2482], ["Toa Baja", 18.4438, -66.2557],
+            ["Trujillo Alto", 18.3541, -66.0074], ["Utuado", 18.2655, -66.7005], ["Vega Alta", 18.4122, -66.3313],
+            ["Vega Baja", 18.4444, -66.3877], ["Vieques", 18.1258, -65.4402], ["Villalba", 18.1305, -66.4788],
+            ["Yabucoa", 18.0505, -65.8793], ["Yauco", 18.0350, -66.8499]
+        ];
+
+        // Paleta dinámica SGX para los nodos
+        const sgxColors = ["#00FFFF", "#FDCC0D", "#FF0055", "#32527B", "#B87333", "#00FF00", "#FFAA00"];
+        
+        const prNodes = prMunicipalitiesData.map((data, index) => {
+            return {
+                id: data[0].toLowerCase().replace(/\s+/g, '-'),
+                name: data[0],
+                desc: `Punto de acceso digital para ${data[0]}. Sistema listo para ingesta y proyección espacial.`,
+                lat: data[1],
+                lng: data[2],
+                mediaUrl: sgxVideoUrl,
+                color: sgxColors[index % sgxColors.length]
+            };
+        });
+
+        // 2. INICIALIZACIÓN MAPA LEAFLET
+        const map = L.map('map', { zoomControl: false, minZoom: 8, maxZoom: 18 }).setView([18.2208, -66.5901], 9);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: 'SGX Metric Engine' }).addTo(map);
+
+        let activeNode = null;
+        let isVideoPlaying = false;
+        
+        // Elementos UI
+        const mapEngine = document.getElementById('map-engine');
+        const vrContainer = document.getElementById('vr-container');
+        const vrHud = document.getElementById('vr-hud');
+        const poiPanel = document.getElementById('poi-panel');
+        const btnEnter360 = document.getElementById('btn-enter-360');
+        const btnBackMap = document.getElementById('btn-back-map');
+        const btnPlayVR = document.getElementById('btn-play-vr');
+        const btnMuteVR = document.getElementById('btn-mute-vr');
+
+        // Poblar Mapa
+        prNodes.forEach(node => {
+            const marker = L.circleMarker([node.lat, node.lng], {
+                radius: 8, fillColor: node.color, color: "#1A1A1A", weight: 2, opacity: 1, fillOpacity: 0.9, className: 'cursor-pointer'
+            }).addTo(map);
+
+            marker.bindPopup(`<strong style="font-family:'Orbitron'; color:${node.color};">${node.name}</strong>`);
+
+            marker.on('click', () => {
+                activeNode = node;
+                // Animar cámara de mapa para dejar espacio al panel
+                const offsetLat = window.innerWidth <= 768 ? node.lat - 0.08 : node.lat; 
+                map.flyTo([offsetLat, node.lng], 11, { duration: 1.2 });
+
+                document.getElementById('poi-name').textContent = node.name;
+                document.getElementById('poi-desc').textContent = node.desc;
+                document.getElementById('poi-name').style.color = node.color;
+                document.getElementById('poi-badge').style.borderColor = node.color;
+                document.getElementById('poi-badge').style.color = node.color;
+                
+                poiPanel.style.transform = 'translateY(0)';
+            });
+        });
+
+        // Ocultar panel si tocas el mapa vacío
+        map.on('click', () => {
+            poiPanel.style.transform = 'translateY(120%)';
+            activeNode = null;
+        });
+
+        // 3. INYECCIÓN DESTRUTIVA DE A-FRAME (CERO RAM LEAK)
+        const injectAFrame = () => {
+            // Ocultar Mapa
+            mapEngine.style.opacity = '0';
+            setTimeout(() => { mapEngine.style.display = 'none'; }, 400);
+
+            // Inyectar HTML crudo del WebXR a nuestro div
+            vrContainer.innerHTML = `
+                <a-scene embedded loading-screen="dotsColor: #00FFFF; backgroundColor: #050505" renderer="antialias: true;">
+                    <a-assets>
+                        <video id="aframe-video" src="${activeNode.mediaUrl}" crossorigin="anonymous" playsinline webkit-playsinline loop muted></video>
+                    </a-assets>
+                    <a-videosphere src="#aframe-video" rotation="0 -90 0"></a-videosphere>
+                    <a-entity camera look-controls position="0 1.6 0"></a-entity>
+                </a-scene>
+            `;
+
+            // Configurar UI y Video
+            document.getElementById('vr-title').textContent = activeNode.name;
+            vrHud.classList.remove('hidden');
+            vrHud.classList.add('flex');
             
-            // Ocultar controles al entrar en modo inmersivo (Meta Quest)
-            sceneEl.addEventListener('enter-vr', () => {
-                if(controlsUI) controlsUI.style.display = 'none';
-            });
-            sceneEl.addEventListener('exit-vr', () => {
-                if(controlsUI) controlsUI.style.display = 'flex';
-                // Forzar reproducción al salir para evitar pausas indeseadas
-                if(mediaEl && mediaEl.tagName === 'VIDEO' && !mediaEl.paused) {
-                    mediaEl.play().catch(e => console.warn(e));
+            setTimeout(() => {
+                vrHud.style.opacity = '1';
+                
+                const vid = document.getElementById('aframe-video');
+                if (vid) {
+                    vid.muted = true; // Empieza silenciado para garantizar autoplay en celular
+                    btnMuteVR.innerHTML = '<i class="fas fa-volume-mute"></i>';
+                    btnMuteVR.className = "w-12 h-12 rounded-full text-white bg-sgxmetal border border-white hover:text-sgxcyan hover:border-sgxcyan transition-all flex items-center justify-center text-xl cursor-pointer";
+
+                    vid.play().then(() => {
+                        isVideoPlaying = true;
+                        btnPlayVR.innerHTML = '<i class="fas fa-pause"></i>';
+                        btnPlayVR.className = "w-12 h-12 rounded-full text-sgxblack bg-sgxyellow border border-sgxyellow hover:bg-sgxmetal hover:text-sgxyellow transition-all flex items-center justify-center text-xl cursor-pointer";
+                    }).catch(err => {
+                        console.log("Autoplay bloqueado. Toque manual requerido.", err);
+                        isVideoPlaying = false;
+                        btnPlayVR.innerHTML = '<i class="fas fa-play pl-1"></i>';
+                        btnPlayVR.className = "w-12 h-12 rounded-full text-sgxyellow bg-sgxmetal border border-sgxyellow hover:bg-sgxyellow hover:text-sgxblack transition-all flex items-center justify-center text-xl cursor-pointer";
+                    });
                 }
-            });
+            }, 500);
+        };
 
-            if(mediaEl && mediaEl.tagName === 'VIDEO') {
-                const btnPlay = document.getElementById('btn-play');
-                const btnMute = document.getElementById('btn-mute');
-                let isPlaying = false;
+        // 4. SOLICITUD DE SENSORES Y ARRANQUE (IOS 13+ HACK)
+        btnEnter360.addEventListener('click', () => {
+            if (!activeNode) return;
 
-                // Forzar arranque inicial (Autoplay en móviles requiere interacción a veces)
-                mediaEl.play().then(() => {
-                    isPlaying = true;
-                    btnPlay.innerHTML = '<i class="fas fa-pause"></i>';
-                }).catch(error => {
-                    console.log("Sistema bloqueando autoplay. Requiere interacción.", error);
-                    btnPlay.innerHTML = '<i class="fas fa-play"></i>';
-                });
-
-                // Lógica Botón Play/Pause
-                btnPlay.addEventListener('click', () => {
-                    if (mediaEl.paused) {
-                        mediaEl.play();
-                        isPlaying = true;
-                        btnPlay.innerHTML = '<i class="fas fa-pause"></i>';
-                    } else {
-                        mediaEl.pause();
-                        isPlaying = false;
-                        btnPlay.innerHTML = '<i class="fas fa-play"></i>';
-                    }
-                });
-
-                // Lógica Botón Mute/Unmute
-                btnMute.addEventListener('click', () => {
-                    mediaEl.muted = !mediaEl.muted;
-                    if (mediaEl.muted) {
-                        btnMute.innerHTML = '<i class="fas fa-volume-mute"></i>';
-                        btnMute.classList.remove('ctrl-active');
-                    } else {
-                        btnMute.innerHTML = '<i class="fas fa-volume-up"></i>';
-                        btnMute.classList.add('ctrl-active');
-                    }
-                });
+            // Manejo estricto de DeviceOrientationEvent para navegadores iOS/Safari
+            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                DeviceOrientationEvent.requestPermission()
+                    .then(permissionState => {
+                        if (permissionState === 'granted') {
+                            injectAFrame();
+                        } else {
+                            // Silently degrade to manual drag mode if denied.
+                            injectAFrame();
+                        }
+                    })
+                    .catch(e => {
+                        console.warn("Fricción en permiso de giroscopio:", e);
+                        injectAFrame();
+                    });
+            } else {
+                // Navegadores normales (Android, Desktop, versiones iOS viejas)
+                injectAFrame();
             }
         });
+
+        // 5. DESTRUCCIÓN DINÁMICA (DESCONECTAR)
+        btnBackMap.addEventListener('click', () => {
+            // Animación de salida HUD
+            vrHud.style.opacity = '0';
+            
+            setTimeout(() => {
+                vrHud.classList.remove('flex');
+                vrHud.classList.add('hidden');
+                
+                // Purgar y Matar Elemento A-Frame
+                const vid = document.getElementById('aframe-video');
+                if (vid) {
+                    vid.pause();
+                    vid.removeAttribute('src');
+                    vid.load();
+                }
+                vrContainer.innerHTML = ''; // Elimina WebGL del DOM = Libera memoria
+                
+                // Restaurar Mapa
+                mapEngine.style.display = 'flex';
+                setTimeout(() => { mapEngine.style.opacity = '1'; }, 50);
+            }, 400);
+        });
+
+        // 6. CONTROLES DE HUD (PLAY / MUTE) DINÁMICOS
+        btnPlayVR.addEventListener('click', () => {
+            const vid = document.getElementById('aframe-video');
+            if(!vid) return;
+
+            if(vid.paused) {
+                vid.play();
+                isVideoPlaying = true;
+                btnPlayVR.innerHTML = '<i class="fas fa-pause"></i>';
+                btnPlayVR.className = "w-12 h-12 rounded-full text-sgxblack bg-sgxyellow border border-sgxyellow hover:bg-sgxmetal hover:text-sgxyellow transition-all flex items-center justify-center text-xl cursor-pointer";
+            } else {
+                vid.pause();
+                isVideoPlaying = false;
+                btnPlayVR.innerHTML = '<i class="fas fa-play pl-1"></i>';
+                btnPlayVR.className = "w-12 h-12 rounded-full text-sgxyellow bg-sgxmetal border border-sgxyellow hover:bg-sgxyellow hover:text-sgxblack transition-all flex items-center justify-center text-xl cursor-pointer";
+            }
+        });
+
+        btnMuteVR.addEventListener('click', () => {
+            const vid = document.getElementById('aframe-video');
+            if(!vid) return;
+
+            vid.muted = !vid.muted;
+            if (vid.muted) {
+                btnMuteVR.innerHTML = '<i class="fas fa-volume-mute"></i>';
+                btnMuteVR.className = "w-12 h-12 rounded-full text-white bg-sgxmetal border border-white hover:text-sgxcyan hover:border-sgxcyan transition-all flex items-center justify-center text-xl cursor-pointer";
+            } else {
+                btnMuteVR.innerHTML = '<i class="fas fa-volume-up"></i>';
+                btnMuteVR.className = "w-12 h-12 rounded-full text-sgxcyan bg-sgxmetal border border-sgxcyan hover:text-white hover:border-white transition-all flex items-center justify-center text-xl cursor-pointer";
+            }
+        });
+
     </script>
 </body>
 </html>
