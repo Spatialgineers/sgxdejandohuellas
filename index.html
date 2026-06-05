@@ -26,27 +26,35 @@
             -webkit-backdrop-filter: blur(10px);
             padding: 15px;
             clip-path: polygon(0 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%);
-            transition: border-left-color 1s ease;
+            transition: opacity 0.5s ease;
         }
-        h2 {
-            margin: 0 0 5px 0;
-            font-size: 1.5rem;
-            color: #ffffff;
-            letter-spacing: 2px;
-        }
-        p {
-            margin: 0;
-            font-size: 0.9rem;
-            color: #32527B;
-            font-weight: bold;
-        }
-        .blink {
-            animation: blinker 1.5s linear infinite;
-        }
-        @keyframes blinker {
-            50% { opacity: 0; }
-        }
+        h2 { margin: 0 0 5px 0; font-size: 1.5rem; color: #ffffff; letter-spacing: 2px; }
+        p { margin: 0; font-size: 0.9rem; color: #32527B; font-weight: bold; }
+        .blink { animation: blinker 1.5s linear infinite; }
+        @keyframes blinker { 50% { opacity: 0; } }
         
+        /* Ocultamiento Global de UI */
+        .ui-hidden .hideable {
+            display: none !important;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #watermark {
+            position: absolute;
+            bottom: 15px;
+            right: 20px;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.5);
+            cursor: pointer;
+            z-index: 2000;
+            letter-spacing: 1px;
+            transition: color 0.3s ease;
+        }
+        #watermark:hover { color: #FDCC0D; }
+
         #VRButton {
             background: rgba(50, 82, 123, 0.9) !important;
             border: 1px solid #00FFFF !important;
@@ -78,23 +86,22 @@
             color: #ffffff;
             font-family: 'Courier New', monospace;
             font-weight: bold;
+            font-size: 0.7rem;
             text-transform: uppercase;
             box-shadow: 0 4px 15px rgba(50, 82, 123, 0.4);
-            bottom: 80px;
-            left: calc(50% - 60px);
-            width: 120px;
-            padding: 10px 0;
+            bottom: 15px;
+            left: 20px;
+            width: 100px;
+            padding: 8px 0;
             cursor: pointer;
             z-index: 999;
             transition: all 0.3s ease;
             border-radius: 4px;
         }
 
-        #ExitButton {
+        .action-btn {
             position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(184, 115, 51, 0.9); /* Copper */
+            background: rgba(184, 115, 51, 0.9);
             border: 1px solid #FDCC0D;
             color: #FDCC0D;
             font-family: 'Courier New', monospace;
@@ -104,14 +111,15 @@
             padding: 12px 20px;
             cursor: pointer;
             z-index: 1000;
-            display: none; /* Oculto por defecto en el HUB */
+            display: none; 
             transition: all 0.3s ease;
             clip-path: polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px);
         }
-        #ExitButton:hover {
-            background: #FDCC0D;
-            color: #050505;
-        }
+        .action-btn:hover { background: #FDCC0D; color: #050505; }
+        
+        #ExitButton { top: 20px; right: 20px; }
+        #ImmersionButton { top: 80px; right: 20px; background: rgba(50, 82, 123, 0.9); border-color: #00FFFF; color: #00FFFF; }
+        #ImmersionButton:hover { background: #00FFFF; color: #050505; }
 
         #loading-overlay {
             position: absolute;
@@ -134,7 +142,6 @@
             animation: spin 1s linear infinite;
             margin-bottom: 20px;
         }
-        @keyframes spin { 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
@@ -143,13 +150,16 @@
         <h2 id="loading-text" class="blink">INICIALIZANDO HUB...</h2>
     </div>
 
-    <div id="hud">
+    <div id="watermark">POWERED BY SPATIALGINEERS</div>
+
+    <div id="hud" class="hideable">
         <h2>ECOSISTEMA SGX</h2>
         <p>LOS 6 PILARES</p>
         <p id="status-text" style="color: #FDCC0D; margin-top: 10px;">SELECCIONA UN PILAR PARA EXPLORAR</p>
     </div>
 
-    <button id="ExitButton">VOLVER AL HUB</button>
+    <button id="ExitButton" class="action-btn hideable">VOLVER AL HUB</button>
+    <button id="ImmersionButton" class="action-btn hideable">MODO INMERSIVO</button>
 
     <script type="importmap">
         {
@@ -172,11 +182,16 @@
         import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
         import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 
+        // --- MANEJO DE WATERMARK ---
+        document.getElementById('watermark').addEventListener('click', () => {
+            document.body.classList.toggle('ui-hidden');
+        });
+
         // --- DATA DE LOS PILARES ---
         const pillarsData = [
             { id: 'spark', name: 'SPARK', img: 'https://static.wixstatic.com/media/fe81a7_63357760452440439861456c01f55aab~mv2.png', obj: 'https://static.wixstatic.com/3d/fe81a7_1531afe43c6b461c91d99ba7d3dc5471.glb', meta: 'https://static.wixstatic.com/3d/fe81a7_843a1927c3e549608bc3efc9feea0fdf.glb' },
             { id: 'stage', name: 'STAGE', img: 'https://static.wixstatic.com/media/fe81a7_e29d558ee0cf47999842b043f93fad40~mv2.png', obj: 'https://static.wixstatic.com/3d/fe81a7_4b3620e9d7254d8e9928b9b69d868162.glb', meta: 'https://static.wixstatic.com/3d/fe81a7_2e086a18fa484f12b204953cd62086fe.glb' },
-            { id: 'synthesize', name: 'SYNTHESIZE', img: 'https://static.wixstatic.com/media/fe81a7_d739f22494bf4d14b6392eb89987724b~mv2.png', obj: 'https://static.wixstatic.com/3d/fe81a7_956910e1488344ed9b8ec565ee530680.glb', meta: null },
+            { id: 'synthesize', name: 'SYNTHESIZE', img: 'https://static.wixstatic.com/media/fe81a7_d739f22494bf4d14b6392eb89987724b~mv2.png', obj: 'https://static.wixstatic.com/3d/fe81a7_956910e1488344ed9b8ec565ee530680.glb', meta: 'https://video.wixstatic.com/video/fe81a7_a34c9bdce626463cadfb3376fd81faa6/1080p/mp4/file.mp4' },
             { id: 'story', name: 'STORY', img: 'https://static.wixstatic.com/media/fe81a7_5b8907aac0974f8fbd3cb2e9fc2ecce2~mv2.png', obj: 'https://static.wixstatic.com/3d/fe81a7_fc514d69af094bcd9aef6e753bdd9979.glb', meta: 'https://static.wixstatic.com/3d/fe81a7_c5cc1637970c441ca33e0ce3cd4f5f6b.glb' },
             { id: 'systems', name: 'SYSTEMS', img: 'https://static.wixstatic.com/media/fe81a7_ebc058d2a7a14ff1b6a41d411ce70550~mv2.png', obj: 'https://static.wixstatic.com/3d/fe81a7_b7c491b988984ed8a8632ff425cc0754.glb', meta: 'https://static.wixstatic.com/3d/fe81a7_928460424ee5494798da259d6fe587d3.glb' },
             { id: 'showcase', name: 'SHOWCASE', img: 'https://static.wixstatic.com/media/fe81a7_9832d363c6e74e9592dc67f211ce9e37~mv2.png', obj: 'https://static.wixstatic.com/3d/fe81a7_47a02d59fdf14f06887582964950a41e.glb', meta: 'https://static.wixstatic.com/3d/fe81a7_3bd01753acc140c58cfc9698790b6177.glb' }
@@ -191,7 +206,7 @@
         playerRig.position.set(0, 0, 0); 
         scene.add(playerRig);
 
-        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 200);
+        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 2000);
         camera.position.set(0, 1.6, 0); 
         playerRig.add(camera);
 
@@ -206,6 +221,8 @@
         // --- MANEJO DE CAPACIDADES WEBXR & GIROSCOPIO ---
         const vrBtn = VRButton.createButton(renderer);
         const arBtn = ARButton.createButton(renderer);
+        vrBtn.classList.add('hideable');
+        arBtn.classList.add('hideable');
         document.body.appendChild(vrBtn);
         document.body.appendChild(arBtn);
 
@@ -257,9 +274,16 @@
         let useGyro = false;
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.target.set(0, 1.6, -0.1); 
+        controls.enableDamping = true;
+        controls.enableZoom = false;
+        controls.enablePan = false;
+
         if (isMobile) {
             const gyroBtn = document.createElement('button');
             gyroBtn.id = 'GyroButton';
+            gyroBtn.className = 'hideable';
             gyroBtn.innerText = 'GIROSCOPIO';
             document.body.appendChild(gyroBtn);
 
@@ -280,6 +304,7 @@
                     useGyro = false;
                     gyroControls.disconnect();
                     gyroControls = null;
+                    controls.enabled = true; // Restauramos tacto orbital
                     
                     camera.quaternion.identity(); 
                     camera.position.set(0, 1.6, 0); 
@@ -295,19 +320,13 @@
             function enableGyro() {
                 gyroControls = new CustomGyroControls(camera);
                 useGyro = true;
+                controls.enabled = false; // El giroscopio toma el control, permitiendo tacto libre
                 const btn = document.getElementById('GyroButton');
                 btn.style.background = '#FDCC0D';
                 btn.style.color = '#111827';
                 btn.innerText = 'GIRO ACTIVO';
             }
         }
-
-        const controls = new OrbitControls(camera, renderer.domElement);
-        controls.target.set(0, 1.6, -0.1); 
-        controls.enableDamping = true;
-        controls.enableZoom = false;
-        controls.enablePan = false;
-        controls.update();
 
         // --- 2. ENVIRONMENT & LIGHTING ---
         new RGBELoader()
@@ -340,6 +359,11 @@
         const floatingObjects = []; 
         let currentMaqueta = null; 
         let isTransitioning = false; 
+        let currentVideoElement = null;
+
+        let baseMaquetaScale = 1;
+        let isImmersiveScale = false;
+        let immersionButton3D = null;
 
         const dracoLoader = new DRACOLoader();
         dracoLoader.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/gltf/');
@@ -351,7 +375,6 @@
             object.traverse((child) => {
                 if (child.isMesh && child.material) {
                     child.material.envMapIntensity = 1.5; 
-                    
                     if (child.material.color) {
                         child.material.emissive = child.material.color;
                         child.material.emissiveIntensity = 0.2; 
@@ -360,14 +383,11 @@
                         child.material.emissiveMap = child.material.map;
                         child.material.emissiveIntensity = 0.2; 
                     }
-                    
                     child.material.needsUpdate = true;
                 }
             });
         }
 
-        // --- 3.5 SAFE GRIDS ---
-        // Cuadriculado en el piso color Amarillo SGX. Opacidad aumentada al 60% para máxima visibilidad
         const floorGrid = new THREE.GridHelper(100, 100, 0xFDCC0D, 0xFDCC0D);
         floorGrid.material.transparent = true;
         floorGrid.material.opacity = 0.6; 
@@ -445,10 +465,7 @@
                     
                     const planeGeo = new THREE.PlaneGeometry(1.56, 1.56);
                     const planeMat = new THREE.MeshBasicMaterial({ 
-                        map: tex, 
-                        transparent: true, 
-                        opacity: 1.0, 
-                        toneMapped: false 
+                        map: tex, transparent: true, opacity: 1.0, toneMapped: false 
                     });
                     const plane = new THREE.Mesh(planeGeo, planeMat);
                     plane.position.set(0, 1.7, -0.2); 
@@ -507,46 +524,94 @@
 
         // --- 5. METAVERSE (MAQUETA) SYSTEM ---
         
-        // Listener del botón HTML en pantalla
+        // Listeners Botones HTML
         document.getElementById('ExitButton').addEventListener('click', returnToHub);
+        document.getElementById('ImmersionButton').addEventListener('click', toggleImmersion);
+
+        function toggleImmersion() {
+            if (!currentMaqueta) return;
+            isImmersiveScale = !isImmersiveScale;
+            
+            const newText = isImmersiveScale ? 'MODO MAQUETA' : 'MODO INMERSIVO';
+            document.getElementById('ImmersionButton').innerText = newText;
+
+            if (isImmersiveScale) {
+                currentMaqueta.scale.setScalar(baseMaquetaScale * 12.0);
+                currentMaqueta.position.y = -2.5; 
+            } else {
+                currentMaqueta.scale.setScalar(baseMaquetaScale);
+                currentMaqueta.position.y = 1.0; 
+            }
+        }
 
         function loadMetaverse(data) {
             if (isTransitioning || currentMaqueta) return;
-
-            if (!data.meta) {
-                const status = document.getElementById('status-text');
-                status.innerText = `> METAVERSO ${data.name} EN CONSTRUCCIÓN`;
-                status.style.color = '#B87333';
-                setTimeout(() => status.style.color = '#32527B', 2000);
-                return;
-            }
-
             isTransitioning = true; 
             hubGroup.visible = false;
             
             const overlay = document.getElementById('loading-overlay');
-            document.getElementById('loading-text').innerText = `INICIANDO CONEXIÓN A MAQUETA...`;
+            document.getElementById('loading-text').innerText = `INICIANDO CONEXIÓN A METAVERSO...`;
             overlay.style.display = 'flex';
             setTimeout(() => overlay.style.opacity = '1', 10);
 
+            // MANEJO DE VIDEO 360 (Synthesize)
+            if (data.meta && data.meta.endsWith('.mp4')) {
+                const video = document.createElement('video');
+                video.style.display = 'none'; // Inyectado invisiblemente para evitar pausas del navegador
+                video.src = data.meta;
+                video.crossOrigin = 'anonymous';
+                video.loop = true;
+                video.muted = true;
+                video.playsInline = true;
+                document.body.appendChild(video);
+                video.play().catch(e => console.warn('Autoplay bloqueado por el navegador:', e));
+                currentVideoElement = video;
+
+                const texture = new THREE.VideoTexture(video);
+                texture.colorSpace = THREE.SRGBColorSpace;
+                const geo = new THREE.SphereGeometry(500, 60, 40);
+                geo.scale(-1, 1, 1);
+                const mat = new THREE.MeshBasicMaterial({ map: texture });
+                const sphere = new THREE.Mesh(geo, mat);
+                
+                metaverseGroup.add(sphere);
+                currentMaqueta = sphere;
+                
+                playerRig.position.set(0, 0, 0); 
+                camera.position.set(0, 1.6, 0);
+                controls.target.set(0, 1.6, -0.1);
+                controls.enablePan = true;
+                controls.update();
+
+                overlay.style.opacity = '0';
+                setTimeout(() => { overlay.style.display = 'none'; isTransitioning = false; }, 1000);
+                
+                document.getElementById('ExitButton').style.display = 'block';
+                document.getElementById('ImmersionButton').style.display = 'none'; 
+                return;
+            }
+
+            // MANEJO DE MAQUETAS GLB
             gltfLoader.load(
                 data.meta, 
                 (gltf) => {
                     const model = gltf.scene;
                     enhancePBRMaterial(model); 
-                    
                     model.position.set(0,0,0);
                     model.rotation.set(0,0,0);
                     model.scale.set(1,1,1);
 
                     const initialBox = new THREE.Box3().setFromObject(model);
                     const size = initialBox.getSize(new THREE.Vector3()).length();
-                    const scale = 3.0 / size; 
-                    model.scale.setScalar(scale);
+                    baseMaquetaScale = 3.0 / size; 
+                    
+                    isImmersiveScale = false;
+                    document.getElementById('ImmersionButton').innerText = 'MODO INMERSIVO';
+                    
+                    model.scale.setScalar(baseMaquetaScale);
 
                     const finalBox = new THREE.Box3().setFromObject(model);
                     const center = finalBox.getCenter(new THREE.Vector3());
-
                     model.position.x -= center.x;
                     model.position.y -= center.y - 1.0; 
                     model.position.z -= center.z;
@@ -555,9 +620,9 @@
                     currentMaqueta = model;
 
                     if (!renderer.xr.isPresenting) {
+                        playerRig.position.set(0, 0, 0);
                         camera.position.set(0, 2.0, 4.0);
                         controls.target.set(0, 1.0, 0); 
-                        controls.enableZoom = true; 
                         controls.enablePan = true;  
                         controls.update();
                     } else {
@@ -565,52 +630,49 @@
                     }
 
                     overlay.style.opacity = '0';
-                    setTimeout(() => {
-                        overlay.style.display = 'none';
-                        isTransitioning = false; 
-                    }, 1000);
+                    setTimeout(() => { overlay.style.display = 'none'; isTransitioning = false; }, 1000);
                     
-                    // Mostrar botón 2D de salida
                     document.getElementById('ExitButton').style.display = 'block';
-                    document.getElementById('status-text').innerText = `> EXPLORANDO MAQUETA: ${data.name}`;
+                    document.getElementById('ImmersionButton').style.display = 'block';
                 },
                 (xhr) => {
                     if (xhr.lengthComputable) {
-                        const percentComplete = Math.round((xhr.loaded / xhr.total) * 100);
-                        document.getElementById('loading-text').innerText = `DESCARGANDO ${data.name}: ${percentComplete}%`;
+                        document.getElementById('loading-text').innerText = `DESCARGANDO ${data.name}: ${Math.round((xhr.loaded / xhr.total) * 100)}%`;
                     } else {
-                        const mbLoaded = (xhr.loaded / (1024 * 1024)).toFixed(1);
-                        document.getElementById('loading-text').innerText = `DESCARGANDO ${data.name}: ${mbLoaded} MB...`;
+                        document.getElementById('loading-text').innerText = `DESCARGANDO ${data.name}: ${(xhr.loaded / (1024 * 1024)).toFixed(1)} MB...`;
                     }
                 },
                 (error) => {
-                    console.error("Error al cargar la maqueta:", error);
                     document.getElementById('loading-text').innerText = `ERROR DE RED. VOLVIENDO AL HUB...`;
                     document.getElementById('loading-text').style.color = '#ff0000'; 
-                    
                     setTimeout(() => {
                         returnToHub(); 
                         overlay.style.opacity = '0';
-                        setTimeout(() => {
-                            overlay.style.display = 'none';
-                            document.getElementById('loading-text').style.color = '#00FFFF'; 
-                            isTransitioning = false; 
-                        }, 1000);
+                        setTimeout(() => { overlay.style.display = 'none'; document.getElementById('loading-text').style.color = '#00FFFF'; isTransitioning = false; }, 1000);
                     }, 3000);
                 }
             );
         }
 
         function returnToHub() {
-            if (isTransitioning && currentMaqueta === null) return;
+            if (isTransitioning && currentMaqueta === null && !currentVideoElement) return;
 
-            // Purgar todos los hijos del grupo de maquetas
+            // Limpieza de Video
+            if (currentVideoElement) {
+                currentVideoElement.pause();
+                currentVideoElement.src = '';
+                currentVideoElement.remove(); // Limpieza pura del DOM
+                currentVideoElement = null;
+            }
+
+            // Purgar maquetas/esferas
             while (metaverseGroup.children.length > 0) {
                 metaverseGroup.remove(metaverseGroup.children[0]);
             }
             currentMaqueta = null;
             
             if (!renderer.xr.isPresenting) {
+                playerRig.position.set(0, 0, 0);
                 camera.position.set(0, 1.6, 0);
                 controls.target.set(0, 1.6, -0.1);
                 controls.enableZoom = false; 
@@ -622,12 +684,10 @@
 
             hubGroup.visible = true;
             document.getElementById('ExitButton').style.display = 'none';
-            
-            // Texto restaurado a neutral, sin confirmaciones distractoras
-            document.getElementById('status-text').innerText = `> SELECCIONA UN PILAR PARA EXPLORAR`;
+            document.getElementById('ImmersionButton').style.display = 'none';
         }
 
-        // --- 6. RAYCASTING & INTERACTION ---
+        // --- 6. LOCOMOTION & INTERACTION ---
         const raycaster = new THREE.Raycaster();
         const tempMatrix = new THREE.Matrix4();
         let hoveredObject = null;
@@ -653,7 +713,28 @@
         const laser1 = new THREE.Line(laserGeometry, laserMaterial); laser1.scale.z = 5; controller1.add(laser1);
         const laser2 = new THREE.Line(laserGeometry, laserMaterial); laser2.scale.z = 5; controller2.add(laser2);
 
+        // Movimiento Libre Teclado
+        const keys = { w: false, a: false, s: false, d: false };
+        window.addEventListener('keydown', e => {
+            if(e.key.toLowerCase() === 'w') keys.w = true;
+            if(e.key.toLowerCase() === 'a') keys.a = true;
+            if(e.key.toLowerCase() === 's') keys.s = true;
+            if(e.key.toLowerCase() === 'd') keys.d = true;
+        });
+        window.addEventListener('keyup', e => {
+            if(e.key.toLowerCase() === 'w') keys.w = false;
+            if(e.key.toLowerCase() === 'a') keys.a = false;
+            if(e.key.toLowerCase() === 's') keys.s = false;
+            if(e.key.toLowerCase() === 'd') keys.d = false;
+        });
+
+        // ----------------------------------------------------
+        // LÓGICA TÁCTIL Y DE RATÓN LIMPIA Y SIN CONFLICTOS
+        // ----------------------------------------------------
         const mouse = new THREE.Vector2();
+        let isTouchingMobile = false;
+
+        // Actualizar coordenadas del ratón sólo para el hover visual
         window.addEventListener('pointermove', (e) => {
             if (renderer.xr.isPresenting) return;
             mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
@@ -662,9 +743,37 @@
             checkIntersections(raycaster);
         });
 
-        window.addEventListener('pointerdown', (e) => {
+        // Evento CLIC dedicado para la interacción 3D (Botones de pilares/HUD 3D)
+        // Esto evita que al arrastrar la cámara se disparen clics por accidente
+        window.addEventListener('click', (e) => {
             if (renderer.xr.isPresenting) return;
-            if (hoveredObject) hoveredObject.userData.onClick();
+            // Evitar conflicto con los botones de la interfaz HTML 2D
+            if (e.target.tagName === 'BUTTON' || e.target.id === 'watermark') return;
+            
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+            
+            const activeInteractables = interactables.filter(obj => obj.visible && (obj.parent === hubGroup ? hubGroup.visible : true));
+            const intersects = raycaster.intersectObjects(activeInteractables, false);
+
+            if (intersects.length > 0) {
+                intersects[0].object.userData.onClick();
+            }
+        });
+
+        // Locomoción Móvil (Avanzar) aislada: Sólo funciona si el giroscopio está activo 
+        // y tocamos explícitamente el canvas de renderizado (no la UI).
+        renderer.domElement.addEventListener('pointerdown', (e) => {
+            if (useGyro && !renderer.xr.isPresenting) {
+                isTouchingMobile = true;
+            }
+        });
+        renderer.domElement.addEventListener('pointerup', () => { 
+            isTouchingMobile = false; 
+        });
+        renderer.domElement.addEventListener('pointerleave', () => { 
+            isTouchingMobile = false; 
         });
 
         function onSelectStart(event) {
@@ -718,6 +827,31 @@
             checkIntersections(rc);
         }
 
+        function handleLocomotion() {
+            const session = renderer.xr.getSession();
+            if (!session || !session.inputSources) return;
+            for (const source of session.inputSources) {
+                if (source.gamepad) {
+                    const axes = source.gamepad.axes;
+                    let xAxis = axes.length >= 4 ? axes[2] : axes[0];
+                    let yAxis = axes.length >= 4 ? axes[3] : axes[1];
+
+                    if (Math.abs(xAxis) > 0.15 || Math.abs(yAxis) > 0.15) {
+                        const quaternion = new THREE.Quaternion();
+                        camera.getWorldQuaternion(quaternion);
+                        const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(quaternion);
+                        const right = new THREE.Vector3(1, 0, 0).applyQuaternion(quaternion);
+                        
+                        forward.y = 0; right.y = 0; 
+                        forward.normalize(); right.normalize();
+                        
+                        playerRig.position.addScaledVector(forward, -yAxis * 0.1);
+                        playerRig.position.addScaledVector(right, xAxis * 0.1);
+                    }
+                }
+            }
+        }
+
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
@@ -731,6 +865,20 @@
                 controls.update(); 
             }
 
+            // Movimiento Libre 2D (PC / Mobile Gyro)
+            if (currentMaqueta) {
+                const moveSpeed = isImmersiveScale ? 0.2 : 0.05;
+                const dir = new THREE.Vector3();
+                camera.getWorldDirection(dir);
+                dir.y = 0; dir.normalize();
+                const right = new THREE.Vector3().crossVectors(camera.up, dir).normalize();
+
+                if (keys.w || (isTouchingMobile && useGyro)) playerRig.position.addScaledVector(dir, moveSpeed);
+                if (keys.s) playerRig.position.addScaledVector(dir, -moveSpeed);
+                if (keys.a) playerRig.position.addScaledVector(right, -moveSpeed);
+                if (keys.d) playerRig.position.addScaledVector(right, moveSpeed);
+            }
+
             if (hubGroup.visible) {
                 floatingObjects.forEach((obj, index) => {
                     obj.position.y = 1.1 + Math.sin(time * 0.002 + index) * 0.1;
@@ -739,13 +887,20 @@
 
             if (renderer.xr.isPresenting) {
                 document.getElementById('hud').style.display = 'none';
-                // Aseguramos que el botón HTML se oculte en VR
+                document.getElementById('watermark').style.display = 'none';
                 document.getElementById('ExitButton').style.display = 'none';
+                document.getElementById('ImmersionButton').style.display = 'none';
                 updateVRRaycasting();
+                handleLocomotion();
             } else {
-                document.getElementById('hud').style.display = 'block';
-                // Restaurar visibilidad si estamos dentro de una maqueta
-                if (currentMaqueta) document.getElementById('ExitButton').style.display = 'block';
+                if(!document.body.classList.contains('ui-hidden')) {
+                    document.getElementById('hud').style.display = 'block';
+                    document.getElementById('watermark').style.display = 'block';
+                    if (currentMaqueta) {
+                        document.getElementById('ExitButton').style.display = 'block';
+                        if (!currentVideoElement) document.getElementById('ImmersionButton').style.display = 'block';
+                    }
+                }
             }
 
             renderer.render(scene, camera);
