@@ -2,405 +2,754 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SGX // PUERTO RICO 360 MASTER ENGINE</title>
-    
-    <!-- Taildwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Leaflet CSS & JS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>SGX Pillars Showcase</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #d1d5db; 
+            font-family: 'Courier New', monospace;
+            color: #1a1a1a;
+            touch-action: none;
+        }
+        #hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 10;
+            pointer-events: none;
+            border-left: 4px solid #00FFFF;
+            padding-left: 15px;
+            background: rgba(10, 13, 20, 0.8);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 15px;
+            clip-path: polygon(0 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%);
+            transition: border-left-color 1s ease;
+        }
+        h2 {
+            margin: 0 0 5px 0;
+            font-size: 1.5rem;
+            color: #ffffff;
+            letter-spacing: 2px;
+        }
+        p {
+            margin: 0;
+            font-size: 0.9rem;
+            color: #32527B;
+            font-weight: bold;
+        }
+        .blink {
+            animation: blinker 1.5s linear infinite;
+        }
+        @keyframes blinker {
+            50% { opacity: 0; }
+        }
+        
+        #VRButton {
+            background: rgba(50, 82, 123, 0.9) !important;
+            border: 1px solid #00FFFF !important;
+            color: #00FFFF !important;
+            font-family: 'Courier New', monospace !important;
+            font-weight: bold !important;
+            text-transform: uppercase !important;
+            box-shadow: 0 4px 15px rgba(0, 255, 255, 0.3) !important;
+            left: calc(50% - 120px) !important;
+            width: 110px !important;
+        }
 
-    <!-- A-Frame (WebXR Framework) -->
-    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
-    
-    <!-- Fonts & Icons -->
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        #ARButton {
+            background: rgba(253, 204, 13, 0.9) !important;
+            border: 1px solid #FDCC0D !important;
+            color: #111827 !important;
+            font-family: 'Courier New', monospace !important;
+            font-weight: bold !important;
+            text-transform: uppercase !important;
+            box-shadow: 0 4px 15px rgba(253, 204, 13, 0.4) !important;
+            left: calc(50% + 10px) !important;
+            width: 110px !important;
+        }
 
-    <!-- SGX Brand Config -->
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        sgxblue: '#32527B',
-                        sgxyellow: '#FDCC0D',
-                        sgxmetal: '#1A1A1A',
-                        sgxcyan: '#00FFFF',
-                        sgxblack: '#050505',
-                        sgxcopper: '#B87333'
-                    },
-                    fontFamily: {
-                        mono: ['Orbitron', 'sans-serif'],
-                        sans: ['Rajdhani', 'sans-serif'],
-                    }
-                }
+        #GyroButton {
+            position: absolute;
+            background: rgba(50, 82, 123, 0.9);
+            border: 1px solid #32527B;
+            color: #ffffff;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            text-transform: uppercase;
+            box-shadow: 0 4px 15px rgba(50, 82, 123, 0.4);
+            bottom: 80px;
+            left: calc(50% - 60px);
+            width: 120px;
+            padding: 10px 0;
+            cursor: pointer;
+            z-index: 999;
+            transition: all 0.3s ease;
+            border-radius: 4px;
+        }
+
+        #ExitButton {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(184, 115, 51, 0.9); /* Copper */
+            border: 1px solid #FDCC0D;
+            color: #FDCC0D;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            text-transform: uppercase;
+            box-shadow: 0 4px 15px rgba(253, 204, 13, 0.4);
+            padding: 12px 20px;
+            cursor: pointer;
+            z-index: 1000;
+            display: none; /* Oculto por defecto en el HUB */
+            transition: all 0.3s ease;
+            clip-path: polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px);
+        }
+        #ExitButton:hover {
+            background: #FDCC0D;
+            color: #050505;
+        }
+
+        #loading-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(209, 213, 219, 0.95); 
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #32527B;
+            font-family: 'Courier New', monospace;
+            transition: opacity 1s ease;
+        }
+        .spinner {
+            width: 50px; height: 50px;
+            border: 3px solid rgba(50, 82, 123, 0.3);
+            border-top-color: #32527B;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+        <h2 id="loading-text" class="blink">INICIALIZANDO HUB...</h2>
+    </div>
+
+    <div id="hud">
+        <h2>ECOSISTEMA SGX</h2>
+        <p>LOS 6 PILARES</p>
+        <p id="status-text" style="color: #FDCC0D; margin-top: 10px;">SELECCIONA UN PILAR PARA EXPLORAR</p>
+    </div>
+
+    <button id="ExitButton">VOLVER AL HUB</button>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
             }
         }
     </script>
 
-    <style>
-        *, *::before, *::after { box-sizing: border-box; }
-        
-        body, html {
-            margin: 0; padding: 0; width: 100%; height: 100dvh; 
-            background-color: #050505; overflow: hidden;
-            font-family: 'Rajdhani', sans-serif;
-            -webkit-user-select: none;
-            user-select: none;
-        }
+    <script type="module">
+        import * as THREE from 'three';
+        import { ARButton } from 'three/addons/webxr/ARButton.js';
+        import { VRButton } from 'three/addons/webxr/VRButton.js';
+        import { XRControllerModelFactory } from 'three/addons/webxr/XRControllerModelFactory.js';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+        import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js';
+        import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+        import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 
-        /* Glassmorphism SGX */
-        .glass-panel {
-            background: rgba(10, 10, 10, 0.85);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(50, 82, 123, 0.6);
-            box-shadow: 0 0 25px rgba(0,0,0,0.9);
-        }
-
-        .clip-45 { clip-path: polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px); }
-        .clip-45-bottom { clip-path: polygon(0 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%); }
-
-        /* Capas Base */
-        #map-engine {
-            position: absolute; inset: 0; z-index: 10;
-            background: #050505; transition: opacity 0.4s ease;
-        }
-        
-        /* Contenedor Vacío para el 3D - Cero Consumo de RAM al iniciar */
-        #vr-container {
-            position: absolute; inset: 0; z-index: 5;
-            background: #000;
-        }
-
-        #vr-hud {
-            position: absolute; inset: 0; z-index: 50;
-            pointer-events: none; /* Traspasa toques al Canvas de A-Frame */
-            opacity: 0; transition: opacity 0.4s ease;
-        }
-
-        .hud-interactive { pointer-events: auto; } /* Reactiva toques solo en botones */
-
-        /* A-Frame UI Overrides */
-        .a-enter-vr { bottom: 30px !important; right: 20px !important; z-index: 9999 !important; }
-
-        /* Leaflet Dark Hack */
-        .leaflet-layer, .leaflet-control-zoom-in, .leaflet-control-zoom-out, .leaflet-control-attribution {
-            filter: invert(100%) hue-rotate(180deg) brightness(90%) contrast(120%);
-        }
-        .leaflet-popup-content-wrapper { background: #1A1A1A; color: #FFF; border: 1px solid #00FFFF; border-radius: 0; }
-        .leaflet-popup-tip { background: #00FFFF; }
-        .leaflet-popup-content { margin: 10px; font-family: 'Orbitron', sans-serif; font-size: 14px; text-align: center;}
-
-        /* Scanning FX */
-        @keyframes scanline { 0% { transform: translateY(-100%); } 100% { transform: translateY(100vh); } }
-        .scan-effect::after {
-            content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 8px;
-            background: rgba(0, 255, 255, 0.1); box-shadow: 0 0 15px rgba(0,255,255,0.4);
-            animation: scanline 3s linear infinite; pointer-events: none; z-index: 9999;
-        }
-    </style>
-</head>
-<body class="text-white scan-effect">
-
-    <!-- ==================== CAPA 1: MAP ENGINE (LEAFLET) ==================== -->
-    <div id="map-engine" class="flex flex-col w-full h-full">
-        <!-- Táctico Header -->
-        <header class="absolute top-0 left-0 w-full z-[1000] p-4 pointer-events-none">
-            <div class="glass-panel clip-45 p-3 flex justify-between items-center pointer-events-auto max-w-5xl mx-auto">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-sgxblue border border-sgxyellow flex items-center justify-center">
-                        <i class="fa-solid fa-satellite text-sgxyellow text-lg"></i>
-                    </div>
-                    <div>
-                        <h1 class="font-mono text-base md:text-xl font-bold tracking-widest m-0 leading-tight">
-                            SGX // PR <span class="text-sgxcyan">360</span>
-                        </h1>
-                        <p class="font-sans text-[10px] text-gray-400 tracking-[0.2em] uppercase">Red Inmersiva: 78 Nodos</p>
-                    </div>
-                </div>
-                <div class="flex items-center gap-2 px-3 py-1 bg-sgxcyan/10 border border-sgxcyan rounded-none clip-45">
-                    <div class="w-2 h-2 rounded-full bg-sgxcyan animate-pulse"></div>
-                    <span class="font-mono text-[10px] text-sgxcyan hidden md:inline">SYSTEM SECURE</span>
-                </div>
-            </div>
-        </header>
-
-        <!-- Leaflet Canvas -->
-        <div id="map" class="w-full h-full"></div>
-
-        <!-- Panel Inferior de Inyección -->
-        <div id="poi-panel" class="absolute bottom-0 left-0 w-full z-[1000] p-4 pointer-events-none flex justify-center translate-y-[120%] transition-transform duration-300 ease-out">
-            <div class="glass-panel clip-45-bottom w-full max-w-3xl p-5 pointer-events-auto border-t border-t-sgxyellow">
-                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div class="flex-1">
-                        <span id="poi-badge" class="px-2 py-1 bg-sgxmetal border border-sgxyellow text-[10px] font-mono text-sgxyellow mb-1 inline-block">TARGET AQUIRED</span>
-                        <h2 id="poi-name" class="font-mono text-2xl md:text-3xl text-white font-bold m-0 uppercase mt-1">SISTEMA LISTO</h2>
-                        <p id="poi-desc" class="font-sans text-sm text-gray-300 mt-2 max-w-md leading-snug">Se requiere permiso de giroscopio para la lectura espacial en dispositivos móviles.</p>
-                    </div>
-                    <button id="btn-enter-360" class="w-full md:w-auto px-6 py-4 bg-sgxblue border border-sgxcyan text-white font-mono font-bold text-sm hover:bg-sgxcyan hover:text-sgxblack transition-all shadow-[0_0_15px_rgba(0,255,255,0.3)] flex items-center justify-center gap-2 clip-45 shrink-0 cursor-pointer">
-                        <i class="fa-solid fa-vr-cardboard text-lg"></i> ENLAZAR SENSORES
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ==================== CAPA 2: CONTENEDOR VR DINÁMICO (LAZY LOAD) ==================== -->
-    <div id="vr-container"></div>
-
-    <!-- ==================== CAPA 3: HUD SOBRE VR ==================== -->
-    <div id="vr-hud" class="hidden flex-col justify-between w-full h-full">
-        <!-- Top HUD -->
-        <div class="p-4 md:p-6 flex justify-between items-start w-full">
-            <button id="btn-back-map" class="hud-interactive glass-panel clip-45 px-5 py-3 text-sgxyellow font-mono text-xs md:text-sm font-bold hover:bg-sgxyellow hover:text-sgxblack transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-sgxblack">
-                <i class="fa-solid fa-xmark text-lg"></i> DESCONECTAR
-            </button>
-            <div id="vr-location-title" class="glass-panel clip-45 px-5 py-2 border-b-2 border-sgxcyan text-right">
-                <h2 class="font-mono text-lg md:text-xl text-sgxcyan font-bold m-0 uppercase tracking-widest" id="vr-title">LOC</h2>
-                <p class="font-sans text-[10px] text-gray-300 uppercase tracking-widest">360 Stream</p>
-            </div>
-        </div>
-
-        <!-- Bottom HUD Controls -->
-        <div class="p-6 flex justify-center w-full pb-12 md:pb-8">
-            <div class="hud-interactive flex gap-6 glass-panel px-6 py-3 clip-45 border border-sgxblue">
-                <button id="btn-play-vr" class="w-12 h-12 rounded-full text-sgxyellow bg-sgxmetal border border-sgxyellow hover:bg-sgxyellow hover:text-sgxblack transition-all flex items-center justify-center text-xl cursor-pointer">
-                    <i class="fas fa-play pl-1"></i>
-                </button>
-                <div class="w-px h-12 bg-sgxblue opacity-50"></div>
-                <button id="btn-mute-vr" class="w-12 h-12 rounded-full text-white bg-sgxmetal border border-white hover:text-sgxcyan hover:border-sgxcyan transition-all flex items-center justify-center text-xl cursor-pointer">
-                    <i class="fas fa-volume-mute"></i>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ==================== LÓGICA CORE (SGX.SYNTHESIZE) ==================== -->
-    <script>
-        // 1. DATA: LOS 78 MUNICIPIOS DE PUERTO RICO
-        const sgxVideoUrl = "https://video.wixstatic.com/video/fe81a7_43b5f0392f21460b936562ecf6c2422b/1080p/mp4/file.mp4";
-        
-        const prMunicipalitiesData = [
-            ["Adjuntas", 18.1628, -66.7221], ["Aguada", 18.3794, -67.1882], ["Aguadilla", 18.4274, -67.1541],
-            ["Aguas Buenas", 18.2566, -66.1032], ["Aibonito", 18.1399, -66.2660], ["Añasco", 18.2827, -67.1405],
-            ["Arecibo", 18.4724, -66.7157], ["Barceloneta", 18.4505, -66.5385], ["Barranquitas", 18.1866, -66.3060],
-            ["Bayamón", 18.3985, -66.1557], ["Cabo Rojo", 18.0866, -67.1457], ["Caguas", 18.2341, -66.0485],
-            ["Camuy", 18.4838, -66.8449], ["Canóvanas", 18.3791, -65.9007], ["Carolina", 18.3808, -65.9574],
-            ["Cataño", 18.4416, -66.1171], ["Cayey", 18.1119, -66.1660], ["Ceiba", 18.2641, -65.6485],
-            ["Ciales", 18.3361, -66.4688], ["Cidra", 18.1758, -66.1613], ["Coamo", 18.0800, -66.3579],
-            ["Comerío", 18.2185, -66.2254], ["Corozal", 18.3411, -66.3168], ["Culebra", 18.3083, -65.3025],
-            ["Dorado", 18.4588, -66.2677], ["Fajardo", 18.3258, -65.6524], ["Florida", 18.3644, -66.5613],
-            ["Guánica", 17.9716, -66.9079], ["Guayama", 17.9841, -66.1138], ["Guayanilla", 18.0191, -66.7918],
-            ["Guaynabo", 18.3575, -66.1110], ["Gurabo", 18.2544, -65.9729], ["Hatillo", 18.4863, -66.8254],
-            ["Hormigueros", 18.1397, -67.1274], ["Humacao", 18.1497, -65.8274], ["Isabela", 18.5008, -67.0244],
-            ["Jayuya", 18.2186, -66.5916], ["Juana Díaz", 18.0525, -66.5066], ["Juncos", 18.2275, -65.9210],
-            ["Lajas", 18.0500, -67.0500], ["Lares", 18.2947, -66.8771], ["Las Marías", 18.2513, -66.9938],
-            ["Las Piedras", 18.1830, -65.8663], ["Loíza", 18.4313, -65.8802], ["Luquillo", 18.3725, -65.7166],
-            ["Manatí", 18.4274, -66.4921], ["Maricao", 18.1808, -66.9799], ["Maunabo", 18.0072, -65.8993],
-            ["Mayagüez", 18.2011, -67.1396], ["Moca", 18.3947, -67.1132], ["Morovis", 18.3258, -66.4066],
-            ["Naguabo", 18.2116, -65.7349], ["Naranjito", 18.3008, -66.2449], ["Orocovis", 18.2269, -66.3910],
-            ["Patillas", 18.0066, -66.0157], ["Peñuelas", 18.0641, -66.7216], ["Ponce", 18.0111, -66.6141],
-            ["Quebradillas", 18.4738, -66.9385], ["Rincón", 18.3402, -67.2500], ["Río Grande", 18.3797, -65.8316],
-            ["Sabana Grande", 18.0777, -66.9604], ["Salinas", 17.9775, -66.2977], ["San Germán", 18.0811, -67.0406],
-            ["San Juan", 18.4655, -66.1057], ["San Lorenzo", 18.1894, -65.9610], ["San Sebastián", 18.3377, -66.9904],
-            ["Santa Isabel", 17.9658, -66.4052], ["Toa Alta", 18.3883, -66.2482], ["Toa Baja", 18.4438, -66.2557],
-            ["Trujillo Alto", 18.3541, -66.0074], ["Utuado", 18.2655, -66.7005], ["Vega Alta", 18.4122, -66.3313],
-            ["Vega Baja", 18.4444, -66.3877], ["Vieques", 18.1258, -65.4402], ["Villalba", 18.1305, -66.4788],
-            ["Yabucoa", 18.0505, -65.8793], ["Yauco", 18.0350, -66.8499]
+        // --- DATA DE LOS PILARES ---
+        const pillarsData = [
+            { id: 'spark', name: 'SPARK', img: 'https://static.wixstatic.com/media/fe81a7_63357760452440439861456c01f55aab~mv2.png', obj: 'https://static.wixstatic.com/3d/fe81a7_1531afe43c6b461c91d99ba7d3dc5471.glb', meta: 'https://static.wixstatic.com/3d/fe81a7_843a1927c3e549608bc3efc9feea0fdf.glb' },
+            { id: 'stage', name: 'STAGE', img: 'https://static.wixstatic.com/media/fe81a7_e29d558ee0cf47999842b043f93fad40~mv2.png', obj: 'https://static.wixstatic.com/3d/fe81a7_4b3620e9d7254d8e9928b9b69d868162.glb', meta: 'https://static.wixstatic.com/3d/fe81a7_2e086a18fa484f12b204953cd62086fe.glb' },
+            { id: 'synthesize', name: 'SYNTHESIZE', img: 'https://static.wixstatic.com/media/fe81a7_d739f22494bf4d14b6392eb89987724b~mv2.png', obj: 'https://static.wixstatic.com/3d/fe81a7_956910e1488344ed9b8ec565ee530680.glb', meta: null },
+            { id: 'story', name: 'STORY', img: 'https://static.wixstatic.com/media/fe81a7_5b8907aac0974f8fbd3cb2e9fc2ecce2~mv2.png', obj: 'https://static.wixstatic.com/3d/fe81a7_fc514d69af094bcd9aef6e753bdd9979.glb', meta: 'https://static.wixstatic.com/3d/fe81a7_c5cc1637970c441ca33e0ce3cd4f5f6b.glb' },
+            { id: 'systems', name: 'SYSTEMS', img: 'https://static.wixstatic.com/media/fe81a7_ebc058d2a7a14ff1b6a41d411ce70550~mv2.png', obj: 'https://static.wixstatic.com/3d/fe81a7_b7c491b988984ed8a8632ff425cc0754.glb', meta: 'https://static.wixstatic.com/3d/fe81a7_928460424ee5494798da259d6fe587d3.glb' },
+            { id: 'showcase', name: 'SHOWCASE', img: 'https://static.wixstatic.com/media/fe81a7_9832d363c6e74e9592dc67f211ce9e37~mv2.png', obj: 'https://static.wixstatic.com/3d/fe81a7_47a02d59fdf14f06887582964950a41e.glb', meta: 'https://static.wixstatic.com/3d/fe81a7_3bd01753acc140c58cfc9698790b6177.glb' }
         ];
 
-        // Paleta dinámica SGX para los nodos
-        const sgxColors = ["#00FFFF", "#FDCC0D", "#FF0055", "#32527B", "#B87333", "#00FF00", "#FFAA00"];
-        
-        const prNodes = prMunicipalitiesData.map((data, index) => {
-            return {
-                id: data[0].toLowerCase().replace(/\s+/g, '-'),
-                name: data[0],
-                desc: `Punto de acceso digital para ${data[0]}. Sistema listo para ingesta y proyección espacial.`,
-                lat: data[1],
-                lng: data[2],
-                mediaUrl: sgxVideoUrl,
-                color: sgxColors[index % sgxColors.length]
-            };
-        });
+        // --- 1. CORE ARCHITECTURE & RENDERER ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xd1d5db); 
+        scene.fog = new THREE.FogExp2(0xd1d5db, 0.02); 
 
-        // 2. INICIALIZACIÓN MAPA LEAFLET
-        const map = L.map('map', { zoomControl: false, minZoom: 8, maxZoom: 18 }).setView([18.2208, -66.5901], 9);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: 'SGX Metric Engine' }).addTo(map);
+        const playerRig = new THREE.Group();
+        playerRig.position.set(0, 0, 0); 
+        scene.add(playerRig);
 
-        let activeNode = null;
-        let isVideoPlaying = false;
-        
-        // Elementos UI
-        const mapEngine = document.getElementById('map-engine');
-        const vrContainer = document.getElementById('vr-container');
-        const vrHud = document.getElementById('vr-hud');
-        const poiPanel = document.getElementById('poi-panel');
-        const btnEnter360 = document.getElementById('btn-enter-360');
-        const btnBackMap = document.getElementById('btn-back-map');
-        const btnPlayVR = document.getElementById('btn-play-vr');
-        const btnMuteVR = document.getElementById('btn-mute-vr');
+        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 200);
+        camera.position.set(0, 1.6, 0); 
+        playerRig.add(camera);
 
-        // Poblar Mapa
-        prNodes.forEach(node => {
-            const marker = L.circleMarker([node.lat, node.lng], {
-                radius: 8, fillColor: node.color, color: "#1A1A1A", weight: 2, opacity: 1, fillOpacity: 0.9, className: 'cursor-pointer'
-            }).addTo(map);
+        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance", alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.xr.enabled = true; 
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.0; 
+        document.body.appendChild(renderer.domElement);
 
-            marker.bindPopup(`<strong style="font-family:'Orbitron'; color:${node.color};">${node.name}</strong>`);
+        // --- MANEJO DE CAPACIDADES WEBXR & GIROSCOPIO ---
+        const vrBtn = VRButton.createButton(renderer);
+        const arBtn = ARButton.createButton(renderer);
+        document.body.appendChild(vrBtn);
+        document.body.appendChild(arBtn);
 
-            marker.on('click', () => {
-                activeNode = node;
-                // Animar cámara de mapa para dejar espacio al panel
-                const offsetLat = window.innerWidth <= 768 ? node.lat - 0.08 : node.lat; 
-                map.flyTo([offsetLat, node.lng], 11, { duration: 1.2 });
-
-                document.getElementById('poi-name').textContent = node.name;
-                document.getElementById('poi-desc').textContent = node.desc;
-                document.getElementById('poi-name').style.color = node.color;
-                document.getElementById('poi-badge').style.borderColor = node.color;
-                document.getElementById('poi-badge').style.color = node.color;
-                
-                poiPanel.style.transform = 'translateY(0)';
+        if ('xr' in navigator) {
+            navigator.xr.isSessionSupported('immersive-vr').then(supported => {
+                if(!supported) vrBtn.style.display = 'none';
             });
-        });
+            navigator.xr.isSessionSupported('immersive-ar').then(supported => {
+                if(!supported) arBtn.style.display = 'none';
+            });
+        } else {
+            vrBtn.style.display = 'none';
+            arBtn.style.display = 'none';
+        }
 
-        // Ocultar panel si tocas el mapa vacío
-        map.on('click', () => {
-            poiPanel.style.transform = 'translateY(120%)';
-            activeNode = null;
-        });
+        class CustomGyroControls {
+            constructor(object) {
+                this.object = object;
+                this.enabled = true;
+                this.deviceOrientation = {};
+                this.screenOrientation = window.orientation || 0;
+                this.onDeviceOrientationChangeEvent = (e) => { this.deviceOrientation = e; };
+                this.onScreenOrientationChangeEvent = () => { this.screenOrientation = window.orientation || 0; };
+                window.addEventListener('orientationchange', this.onScreenOrientationChangeEvent);
+                window.addEventListener('deviceorientation', this.onDeviceOrientationChangeEvent);
+            }
+            disconnect() {
+                window.removeEventListener('orientationchange', this.onScreenOrientationChangeEvent);
+                window.removeEventListener('deviceorientation', this.onDeviceOrientationChangeEvent);
+                this.enabled = false;
+            }
+            update() {
+                if (!this.enabled) return;
+                const alpha = this.deviceOrientation.alpha ? THREE.MathUtils.degToRad(this.deviceOrientation.alpha) : 0;
+                const beta = this.deviceOrientation.beta ? THREE.MathUtils.degToRad(this.deviceOrientation.beta) : 0;
+                const gamma = this.deviceOrientation.gamma ? THREE.MathUtils.degToRad(this.deviceOrientation.gamma) : 0;
+                const orient = this.screenOrientation ? THREE.MathUtils.degToRad(this.screenOrientation) : 0;
+                const euler = new THREE.Euler(beta, alpha, -gamma, 'YXZ');
+                const q0 = new THREE.Quaternion();
+                const q1 = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5));
+                const zee = new THREE.Vector3(0, 0, 1);
+                this.object.quaternion.setFromEuler(euler);
+                this.object.quaternion.multiply(q1);
+                this.object.quaternion.multiply(q0.setFromAxisAngle(zee, -orient));
+            }
+        }
 
-        // 3. INYECCIÓN DESTRUTIVA DE A-FRAME (CERO RAM LEAK)
-        const injectAFrame = () => {
-            // Ocultar Mapa
-            mapEngine.style.opacity = '0';
-            setTimeout(() => { mapEngine.style.display = 'none'; }, 400);
+        let gyroControls = null;
+        let useGyro = false;
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-            // Inyectar HTML crudo del WebXR a nuestro div
-            vrContainer.innerHTML = `
-                <a-scene embedded loading-screen="dotsColor: #00FFFF; backgroundColor: #050505" renderer="antialias: true;">
-                    <a-assets>
-                        <video id="aframe-video" src="${activeNode.mediaUrl}" crossorigin="anonymous" playsinline webkit-playsinline loop muted></video>
-                    </a-assets>
-                    <a-videosphere src="#aframe-video" rotation="0 -90 0"></a-videosphere>
-                    <a-entity camera look-controls position="0 1.6 0"></a-entity>
-                </a-scene>
-            `;
+        if (isMobile) {
+            const gyroBtn = document.createElement('button');
+            gyroBtn.id = 'GyroButton';
+            gyroBtn.innerText = 'GIROSCOPIO';
+            document.body.appendChild(gyroBtn);
 
-            // Configurar UI y Video
-            document.getElementById('vr-title').textContent = activeNode.name;
-            vrHud.classList.remove('hidden');
-            vrHud.classList.add('flex');
-            
-            setTimeout(() => {
-                vrHud.style.opacity = '1';
-                
-                const vid = document.getElementById('aframe-video');
-                if (vid) {
-                    vid.muted = true; // Empieza silenciado para garantizar autoplay en celular
-                    btnMuteVR.innerHTML = '<i class="fas fa-volume-mute"></i>';
-                    btnMuteVR.className = "w-12 h-12 rounded-full text-white bg-sgxmetal border border-white hover:text-sgxcyan hover:border-sgxcyan transition-all flex items-center justify-center text-xl cursor-pointer";
+            gyroBtn.addEventListener('click', () => {
+                if (!gyroControls) {
+                    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                        DeviceOrientationEvent.requestPermission().then(permissionState => {
+                            if (permissionState === 'granted') {
+                                enableGyro();
+                            } else {
+                                alert("Permiso de giroscopio denegado por el dispositivo.");
+                            }
+                        }).catch(console.error);
+                    } else {
+                        enableGyro();
+                    }
+                } else {
+                    useGyro = false;
+                    gyroControls.disconnect();
+                    gyroControls = null;
+                    
+                    camera.quaternion.identity(); 
+                    camera.position.set(0, 1.6, 0); 
+                    controls.target.set(0, 1.6, -0.1);
+                    controls.update();
 
-                    vid.play().then(() => {
-                        isVideoPlaying = true;
-                        btnPlayVR.innerHTML = '<i class="fas fa-pause"></i>';
-                        btnPlayVR.className = "w-12 h-12 rounded-full text-sgxblack bg-sgxyellow border border-sgxyellow hover:bg-sgxmetal hover:text-sgxyellow transition-all flex items-center justify-center text-xl cursor-pointer";
-                    }).catch(err => {
-                        console.log("Autoplay bloqueado. Toque manual requerido.", err);
-                        isVideoPlaying = false;
-                        btnPlayVR.innerHTML = '<i class="fas fa-play pl-1"></i>';
-                        btnPlayVR.className = "w-12 h-12 rounded-full text-sgxyellow bg-sgxmetal border border-sgxyellow hover:bg-sgxyellow hover:text-sgxblack transition-all flex items-center justify-center text-xl cursor-pointer";
-                    });
+                    gyroBtn.style.background = 'rgba(50, 82, 123, 0.9)';
+                    gyroBtn.style.color = '#ffffff';
+                    gyroBtn.innerText = 'GIROSCOPIO';
                 }
-            }, 500);
-        };
+            });
 
-        // 4. SOLICITUD DE SENSORES Y ARRANQUE (IOS 13+ HACK)
-        btnEnter360.addEventListener('click', () => {
-            if (!activeNode) return;
-
-            // Manejo estricto de DeviceOrientationEvent para navegadores iOS/Safari
-            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                DeviceOrientationEvent.requestPermission()
-                    .then(permissionState => {
-                        if (permissionState === 'granted') {
-                            injectAFrame();
-                        } else {
-                            // Silently degrade to manual drag mode if denied.
-                            injectAFrame();
-                        }
-                    })
-                    .catch(e => {
-                        console.warn("Fricción en permiso de giroscopio:", e);
-                        injectAFrame();
-                    });
-            } else {
-                // Navegadores normales (Android, Desktop, versiones iOS viejas)
-                injectAFrame();
+            function enableGyro() {
+                gyroControls = new CustomGyroControls(camera);
+                useGyro = true;
+                const btn = document.getElementById('GyroButton');
+                btn.style.background = '#FDCC0D';
+                btn.style.color = '#111827';
+                btn.innerText = 'GIRO ACTIVO';
             }
-        });
+        }
 
-        // 5. DESTRUCCIÓN DINÁMICA (DESCONECTAR)
-        btnBackMap.addEventListener('click', () => {
-            // Animación de salida HUD
-            vrHud.style.opacity = '0';
-            
-            setTimeout(() => {
-                vrHud.classList.remove('flex');
-                vrHud.classList.add('hidden');
-                
-                // Purgar y Matar Elemento A-Frame
-                const vid = document.getElementById('aframe-video');
-                if (vid) {
-                    vid.pause();
-                    vid.removeAttribute('src');
-                    vid.load();
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.target.set(0, 1.6, -0.1); 
+        controls.enableDamping = true;
+        controls.enableZoom = false;
+        controls.enablePan = false;
+        controls.update();
+
+        // --- 2. ENVIRONMENT & LIGHTING ---
+        new RGBELoader()
+            .load('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/textures/equirectangular/studio_small_08_1k.hdr', function (texture) {
+                texture.mapping = THREE.EquirectangularReflectionMapping;
+                scene.environment = texture; 
+            });
+        
+        const hemiLight = new THREE.HemisphereLight(0xffffff, 0xb0bec5, 0.6);
+        scene.add(hemiLight);
+
+        scene.add(new THREE.AmbientLight(0xffffff, 0.4)); 
+        
+        const cyanLight = new THREE.DirectionalLight(0x00FFFF, 1.0);
+        cyanLight.position.set(-5, 5, 2);
+        scene.add(cyanLight);
+
+        const goldLight = new THREE.DirectionalLight(0xFDCC0D, 1.0);
+        goldLight.position.set(5, 5, 2);
+        scene.add(goldLight);
+
+        // --- 3. GROUPS & LOADERS ---
+        const hubGroup = new THREE.Group();
+        scene.add(hubGroup);
+        
+        const metaverseGroup = new THREE.Group();
+        scene.add(metaverseGroup);
+
+        const interactables = []; 
+        const floatingObjects = []; 
+        let currentMaqueta = null; 
+        let isTransitioning = false; 
+
+        const dracoLoader = new DRACOLoader();
+        dracoLoader.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/gltf/');
+        const ktx2Loader = new KTX2Loader().setTranscoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/basis/').detectSupport(renderer);
+        const gltfLoader = new GLTFLoader().setCrossOrigin('anonymous').setDRACOLoader(dracoLoader).setKTX2Loader(ktx2Loader).setMeshoptDecoder(MeshoptDecoder);
+        const textureLoader = new THREE.TextureLoader().setCrossOrigin('anonymous');
+
+        function enhancePBRMaterial(object) {
+            object.traverse((child) => {
+                if (child.isMesh && child.material) {
+                    child.material.envMapIntensity = 1.5; 
+                    
+                    if (child.material.color) {
+                        child.material.emissive = child.material.color;
+                        child.material.emissiveIntensity = 0.2; 
+                    }
+                    if (child.material.map) {
+                        child.material.emissiveMap = child.material.map;
+                        child.material.emissiveIntensity = 0.2; 
+                    }
+                    
+                    child.material.needsUpdate = true;
                 }
-                vrContainer.innerHTML = ''; // Elimina WebGL del DOM = Libera memoria
+            });
+        }
+
+        // --- 3.5 SAFE GRIDS ---
+        // Cuadriculado en el piso color Amarillo SGX. Opacidad aumentada al 60% para máxima visibilidad
+        const floorGrid = new THREE.GridHelper(100, 100, 0xFDCC0D, 0xFDCC0D);
+        floorGrid.material.transparent = true;
+        floorGrid.material.opacity = 0.6; 
+        floorGrid.position.y = 0;
+        hubGroup.add(floorGrid);
+
+        renderer.xr.addEventListener('sessionstart', () => {
+            const session = renderer.xr.getSession();
+            if (session && session.mode === 'immersive-ar') {
+                scene.background = null;
+                scene.fog = null;
+                floorGrid.visible = false;
+            }
+        });
+        renderer.xr.addEventListener('sessionend', () => {
+            scene.background = new THREE.Color(0xd1d5db); 
+            scene.fog = new THREE.FogExp2(0xd1d5db, 0.02);
+            floorGrid.visible = true;
+            playerRig.position.set(0, 0, 0); 
+        });
+
+        // --- 4. HUB CREATION ---
+        function createUIPanel(text, borderColor) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512; canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = 'rgba(17, 24, 39, 0.9)'; 
+            ctx.fillRect(0, 0, 512, 128);
+            ctx.strokeStyle = borderColor;
+            ctx.lineWidth = 8;
+            ctx.strokeRect(4, 4, 504, 120);
+            
+            ctx.fillStyle = '#FDCC0D'; 
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.font = 'bold 36px Courier New'; 
+            ctx.fillText(text, 256, 64);
+            
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.colorSpace = THREE.SRGBColorSpace; 
+            return tex;
+        }
+
+        async function buildHub() {
+            const radius = 3.5;
+            const angleStep = (Math.PI * 2) / pillarsData.length;
+
+            for (let i = 0; i < pillarsData.length; i++) {
+                const data = pillarsData[i];
+                const angle = i * angleStep;
                 
-                // Restaurar Mapa
-                mapEngine.style.display = 'flex';
-                setTimeout(() => { mapEngine.style.opacity = '1'; }, 50);
-            }, 400);
-        });
+                const px = Math.sin(angle) * radius;
+                const pz = Math.cos(angle) * radius;
 
-        // 6. CONTROLES DE HUD (PLAY / MUTE) DINÁMICOS
-        btnPlayVR.addEventListener('click', () => {
-            const vid = document.getElementById('aframe-video');
-            if(!vid) return;
+                const pillarGroup = new THREE.Group();
+                pillarGroup.position.set(px, 0, pz);
+                pillarGroup.lookAt(0, 0, 0); 
+                hubGroup.add(pillarGroup);
 
-            if(vid.paused) {
-                vid.play();
-                isVideoPlaying = true;
-                btnPlayVR.innerHTML = '<i class="fas fa-pause"></i>';
-                btnPlayVR.className = "w-12 h-12 rounded-full text-sgxblack bg-sgxyellow border border-sgxyellow hover:bg-sgxmetal hover:text-sgxyellow transition-all flex items-center justify-center text-xl cursor-pointer";
-            } else {
-                vid.pause();
-                isVideoPlaying = false;
-                btnPlayVR.innerHTML = '<i class="fas fa-play pl-1"></i>';
-                btnPlayVR.className = "w-12 h-12 rounded-full text-sgxyellow bg-sgxmetal border border-sgxyellow hover:bg-sgxyellow hover:text-sgxblack transition-all flex items-center justify-center text-xl cursor-pointer";
+                const pedGeo = new THREE.CylinderGeometry(0.5, 0.6, 0.2, 16);
+                const pedMat = new THREE.MeshStandardMaterial({ color: 0x1f2937, metalness: 0.8, roughness: 0.2 });
+                const pedestal = new THREE.Mesh(pedGeo, pedMat);
+                pedestal.position.y = 0.1;
+                pillarGroup.add(pedestal);
+
+                const ringGeo = new THREE.TorusGeometry(0.5, 0.015, 16, 64);
+                const ringMat = new THREE.MeshBasicMaterial({ color: 0x32527B }); 
+                const ring = new THREE.Mesh(ringGeo, ringMat);
+                ring.position.y = 0.2;
+                ring.rotation.x = Math.PI / 2;
+                pillarGroup.add(ring);
+
+                textureLoader.load(data.img, (tex) => {
+                    tex.colorSpace = THREE.SRGBColorSpace; 
+                    
+                    const planeGeo = new THREE.PlaneGeometry(1.56, 1.56);
+                    const planeMat = new THREE.MeshBasicMaterial({ 
+                        map: tex, 
+                        transparent: true, 
+                        opacity: 1.0, 
+                        toneMapped: false 
+                    });
+                    const plane = new THREE.Mesh(planeGeo, planeMat);
+                    plane.position.set(0, 1.7, -0.2); 
+                    pillarGroup.add(plane);
+                });
+
+                gltfLoader.load(data.obj, (gltf) => {
+                    const model = gltf.scene;
+                    enhancePBRMaterial(model); 
+
+                    const box = new THREE.Box3().setFromObject(model);
+                    const center = box.getCenter(new THREE.Vector3());
+                    const size = box.getSize(new THREE.Vector3()).length();
+
+                    model.position.x -= center.x;
+                    model.position.y -= center.y;
+                    model.position.z -= center.z;
+
+                    const scale = 0.91 / size; 
+                    model.scale.setScalar(scale);
+
+                    const floater = new THREE.Group();
+                    floater.position.set(0, 1.1, 0);
+                    floater.add(model);
+                    pillarGroup.add(floater);
+                    floatingObjects.push(floater);
+                });
+
+                const uiGeo = new THREE.PlaneGeometry(0.8, 0.2);
+                const texIdle = createUIPanel(`ENTRAR A ${data.name}`, '#32527B');
+                const texHover = createUIPanel(`ENTRAR A ${data.name}`, '#00FFFF');
+                
+                const uiMat = new THREE.MeshBasicMaterial({ map: texIdle, transparent: true, toneMapped: false });
+                const uiMesh = new THREE.Mesh(uiGeo, uiMat);
+                uiMesh.position.set(0, 0.6, 0.2);
+                uiMesh.rotation.x = -Math.PI * 0.1;
+                
+                uiMesh.userData = {
+                    isButton: true,
+                    texIdle: texIdle,
+                    texHover: texHover,
+                    onClick: () => loadMetaverse(data)
+                };
+                
+                pillarGroup.add(uiMesh);
+                interactables.push(uiMesh);
             }
-        });
 
-        btnMuteVR.addEventListener('click', () => {
-            const vid = document.getElementById('aframe-video');
-            if(!vid) return;
+            setTimeout(() => {
+                document.getElementById('loading-overlay').style.opacity = '0';
+                setTimeout(() => document.getElementById('loading-overlay').style.display = 'none', 1000);
+            }, 1500);
+        }
 
-            vid.muted = !vid.muted;
-            if (vid.muted) {
-                btnMuteVR.innerHTML = '<i class="fas fa-volume-mute"></i>';
-                btnMuteVR.className = "w-12 h-12 rounded-full text-white bg-sgxmetal border border-white hover:text-sgxcyan hover:border-sgxcyan transition-all flex items-center justify-center text-xl cursor-pointer";
-            } else {
-                btnMuteVR.innerHTML = '<i class="fas fa-volume-up"></i>';
-                btnMuteVR.className = "w-12 h-12 rounded-full text-sgxcyan bg-sgxmetal border border-sgxcyan hover:text-white hover:border-white transition-all flex items-center justify-center text-xl cursor-pointer";
+        buildHub();
+
+        // --- 5. METAVERSE (MAQUETA) SYSTEM ---
+        
+        // Listener del botón HTML en pantalla
+        document.getElementById('ExitButton').addEventListener('click', returnToHub);
+
+        function loadMetaverse(data) {
+            if (isTransitioning || currentMaqueta) return;
+
+            if (!data.meta) {
+                const status = document.getElementById('status-text');
+                status.innerText = `> METAVERSO ${data.name} EN CONSTRUCCIÓN`;
+                status.style.color = '#B87333';
+                setTimeout(() => status.style.color = '#32527B', 2000);
+                return;
             }
+
+            isTransitioning = true; 
+            hubGroup.visible = false;
+            
+            const overlay = document.getElementById('loading-overlay');
+            document.getElementById('loading-text').innerText = `INICIANDO CONEXIÓN A MAQUETA...`;
+            overlay.style.display = 'flex';
+            setTimeout(() => overlay.style.opacity = '1', 10);
+
+            gltfLoader.load(
+                data.meta, 
+                (gltf) => {
+                    const model = gltf.scene;
+                    enhancePBRMaterial(model); 
+                    
+                    model.position.set(0,0,0);
+                    model.rotation.set(0,0,0);
+                    model.scale.set(1,1,1);
+
+                    const initialBox = new THREE.Box3().setFromObject(model);
+                    const size = initialBox.getSize(new THREE.Vector3()).length();
+                    const scale = 3.0 / size; 
+                    model.scale.setScalar(scale);
+
+                    const finalBox = new THREE.Box3().setFromObject(model);
+                    const center = finalBox.getCenter(new THREE.Vector3());
+
+                    model.position.x -= center.x;
+                    model.position.y -= center.y - 1.0; 
+                    model.position.z -= center.z;
+
+                    metaverseGroup.add(model);
+                    currentMaqueta = model;
+
+                    if (!renderer.xr.isPresenting) {
+                        camera.position.set(0, 2.0, 4.0);
+                        controls.target.set(0, 1.0, 0); 
+                        controls.enableZoom = true; 
+                        controls.enablePan = true;  
+                        controls.update();
+                    } else {
+                        playerRig.position.set(0, 0, 3.5);
+                    }
+
+                    overlay.style.opacity = '0';
+                    setTimeout(() => {
+                        overlay.style.display = 'none';
+                        isTransitioning = false; 
+                    }, 1000);
+                    
+                    // Mostrar botón 2D de salida
+                    document.getElementById('ExitButton').style.display = 'block';
+                    document.getElementById('status-text').innerText = `> EXPLORANDO MAQUETA: ${data.name}`;
+                },
+                (xhr) => {
+                    if (xhr.lengthComputable) {
+                        const percentComplete = Math.round((xhr.loaded / xhr.total) * 100);
+                        document.getElementById('loading-text').innerText = `DESCARGANDO ${data.name}: ${percentComplete}%`;
+                    } else {
+                        const mbLoaded = (xhr.loaded / (1024 * 1024)).toFixed(1);
+                        document.getElementById('loading-text').innerText = `DESCARGANDO ${data.name}: ${mbLoaded} MB...`;
+                    }
+                },
+                (error) => {
+                    console.error("Error al cargar la maqueta:", error);
+                    document.getElementById('loading-text').innerText = `ERROR DE RED. VOLVIENDO AL HUB...`;
+                    document.getElementById('loading-text').style.color = '#ff0000'; 
+                    
+                    setTimeout(() => {
+                        returnToHub(); 
+                        overlay.style.opacity = '0';
+                        setTimeout(() => {
+                            overlay.style.display = 'none';
+                            document.getElementById('loading-text').style.color = '#00FFFF'; 
+                            isTransitioning = false; 
+                        }, 1000);
+                    }, 3000);
+                }
+            );
+        }
+
+        function returnToHub() {
+            if (isTransitioning && currentMaqueta === null) return;
+
+            // Purgar todos los hijos del grupo de maquetas
+            while (metaverseGroup.children.length > 0) {
+                metaverseGroup.remove(metaverseGroup.children[0]);
+            }
+            currentMaqueta = null;
+            
+            if (!renderer.xr.isPresenting) {
+                camera.position.set(0, 1.6, 0);
+                controls.target.set(0, 1.6, -0.1);
+                controls.enableZoom = false; 
+                controls.enablePan = false;  
+                controls.update();
+            } else {
+                playerRig.position.set(0, 0, 0);
+            }
+
+            hubGroup.visible = true;
+            document.getElementById('ExitButton').style.display = 'none';
+            
+            // Texto restaurado a neutral, sin confirmaciones distractoras
+            document.getElementById('status-text').innerText = `> SELECCIONA UN PILAR PARA EXPLORAR`;
+        }
+
+        // --- 6. RAYCASTING & INTERACTION ---
+        const raycaster = new THREE.Raycaster();
+        const tempMatrix = new THREE.Matrix4();
+        let hoveredObject = null;
+
+        const controller1 = renderer.xr.getController(0);
+        controller1.addEventListener('selectstart', onSelectStart);
+        playerRig.add(controller1);
+
+        const controller2 = renderer.xr.getController(1);
+        controller2.addEventListener('selectstart', onSelectStart);
+        playerRig.add(controller2);
+
+        const controllerModelFactory = new XRControllerModelFactory();
+        const grip1 = renderer.xr.getControllerGrip(0);
+        grip1.add(controllerModelFactory.createControllerModel(grip1));
+        playerRig.add(grip1);
+        const grip2 = renderer.xr.getControllerGrip(1);
+        grip2.add(controllerModelFactory.createControllerModel(grip2));
+        playerRig.add(grip2);
+
+        const laserGeometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1)]);
+        const laserMaterial = new THREE.LineBasicMaterial({ color: 0x00FFFF, blending: THREE.AdditiveBlending });
+        const laser1 = new THREE.Line(laserGeometry, laserMaterial); laser1.scale.z = 5; controller1.add(laser1);
+        const laser2 = new THREE.Line(laserGeometry, laserMaterial); laser2.scale.z = 5; controller2.add(laser2);
+
+        const mouse = new THREE.Vector2();
+        window.addEventListener('pointermove', (e) => {
+            if (renderer.xr.isPresenting) return;
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+            checkIntersections(raycaster);
         });
 
+        window.addEventListener('pointerdown', (e) => {
+            if (renderer.xr.isPresenting) return;
+            if (hoveredObject) hoveredObject.userData.onClick();
+        });
+
+        function onSelectStart(event) {
+            tempMatrix.identity().extractRotation(event.target.matrixWorld);
+            raycaster.ray.origin.setFromMatrixPosition(event.target.matrixWorld);
+            raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
+            
+            const activeInteractables = interactables.filter(obj => obj.visible && (obj.parent === hubGroup ? hubGroup.visible : true));
+            const intersects = raycaster.intersectObjects(activeInteractables, false);
+            if (intersects.length > 0) {
+                intersects[0].object.userData.onClick();
+            }
+        }
+
+        function checkIntersections(rc) {
+            const activeInteractables = interactables.filter(obj => obj.visible && (obj.parent === hubGroup ? hubGroup.visible : true));
+            const intersects = rc.intersectObjects(activeInteractables, false);
+
+            if (intersects.length > 0) {
+                const object = intersects[0].object;
+                if (hoveredObject !== object) {
+                    if (hoveredObject) hoveredObject.material.map = hoveredObject.userData.texIdle;
+                    hoveredObject = object;
+                    hoveredObject.material.map = hoveredObject.userData.texHover;
+                    document.body.style.cursor = 'pointer';
+                }
+            } else {
+                if (hoveredObject) {
+                    hoveredObject.material.map = hoveredObject.userData.texIdle;
+                    hoveredObject = null;
+                    document.body.style.cursor = 'default';
+                }
+            }
+        }
+
+        function updateVRRaycasting() {
+            let rc = new THREE.Raycaster();
+            const activeInteractables = interactables.filter(obj => obj.visible && (obj.parent === hubGroup ? hubGroup.visible : true));
+            
+            tempMatrix.identity().extractRotation(controller1.matrixWorld);
+            rc.ray.origin.setFromMatrixPosition(controller1.matrixWorld);
+            rc.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
+            let intersects = rc.intersectObjects(activeInteractables, false);
+            
+            if(intersects.length === 0) {
+                tempMatrix.identity().extractRotation(controller2.matrixWorld);
+                rc.ray.origin.setFromMatrixPosition(controller2.matrixWorld);
+                rc.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
+                intersects = rc.intersectObjects(activeInteractables, false);
+            }
+            checkIntersections(rc);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        renderer.setAnimationLoop((time) => {
+            if (useGyro && gyroControls) {
+                gyroControls.update();
+            } else {
+                controls.update(); 
+            }
+
+            if (hubGroup.visible) {
+                floatingObjects.forEach((obj, index) => {
+                    obj.position.y = 1.1 + Math.sin(time * 0.002 + index) * 0.1;
+                });
+            }
+
+            if (renderer.xr.isPresenting) {
+                document.getElementById('hud').style.display = 'none';
+                // Aseguramos que el botón HTML se oculte en VR
+                document.getElementById('ExitButton').style.display = 'none';
+                updateVRRaycasting();
+            } else {
+                document.getElementById('hud').style.display = 'block';
+                // Restaurar visibilidad si estamos dentro de una maqueta
+                if (currentMaqueta) document.getElementById('ExitButton').style.display = 'block';
+            }
+
+            renderer.render(scene, camera);
+        });
     </script>
 </body>
 </html>
