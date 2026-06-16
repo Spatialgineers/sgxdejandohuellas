@@ -2,909 +2,597 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>SGX Pillars Showcase</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SGX Animus Core // Dejando Huellas Music Fest</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --sgx-black: #050505;
+            --sgx-blue: #32527B;
+            --sgx-gold: #FDCC0D;
+            --sgx-copper: #B87333;
+            --sgx-cyan: #00FFFF;
+        }
+
         body {
             margin: 0;
             overflow: hidden;
-            background: #d1d5db; 
-            font-family: 'Courier New', monospace;
-            color: #1a1a1a;
+            background-color: var(--sgx-black);
+            font-family: 'Roboto Mono', monospace;
+            color: #ffffff;
             touch-action: none;
         }
-        #hud {
+
+        /* --- ASSETS OVERLAYS (VJ SYSTEM) --- */
+        .visual-overlay {
             position: absolute;
-            top: 20px;
-            left: 20px;
-            z-index: 10;
+            z-index: 5;
             pointer-events: none;
-            border-left: 4px solid #00FFFF;
-            padding-left: 15px;
-            background: rgba(10, 13, 20, 0.8);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            padding: 15px;
-            clip-path: polygon(0 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%);
+            object-fit: contain;
+            filter: drop-shadow(0 5px 15px rgba(0,0,0,0.5));
+        }
+
+        #visual-center {
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            max-width: 45vw;
+            max-height: 45vh;
+            /* Transición fluida para absorber el jittering del FFT */
+            transition: filter 0.1s ease-out, transform 0.05s linear; 
+        }
+
+        /* Logos Fijos en Esquinas */
+        #visual-bl {
+            bottom: 30px;
+            left: 30px;
+            max-width: 15vw;
+            max-height: 12vh;
+            display: block; /* Siempre visible */
+        }
+
+        #visual-br {
+            bottom: 30px;
+            right: 30px;
+            max-width: 15vw;
+            max-height: 12vh;
+            display: block; /* Siempre visible */
+        }
+
+        /* --- SGX WATERMARK (CENTRO INFERIOR) --- */
+        #sgx-watermark {
+            position: absolute;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 400; /* Fino */
+            font-size: clamp(0.7rem, 1vw, 0.9rem);
+            color: #ffffff;
+            letter-spacing: 6px;
+            text-transform: uppercase;
+            text-shadow: 0 0 5px var(--sgx-cyan), 0 0 15px var(--sgx-cyan); /* Glow doble */
+            pointer-events: none;
+            text-align: center;
+            opacity: 1;
             transition: opacity 0.5s ease;
         }
-        h2 { margin: 0 0 5px 0; font-size: 1.5rem; color: #ffffff; letter-spacing: 2px; }
-        p { margin: 0; font-size: 0.9rem; color: #32527B; font-weight: bold; }
-        .blink { animation: blinker 1.5s linear infinite; }
-        @keyframes blinker { 50% { opacity: 0; } }
-        
-        /* Ocultamiento Global de UI */
-        .ui-hidden .hideable {
-            display: none !important;
+
+        /* Mensaje extra en modo cinemático */
+        .restore-hint {
+            display: block;
+            font-size: 0.5em;
             opacity: 0;
+            margin-top: 5px;
+            letter-spacing: 3px;
+            transition: opacity 0.5s ease;
+        }
+
+        /* --- UI ELEMENTS --- */
+        #hud-container {
+            position: absolute;
+            top: 30px;
+            left: 30px;
+            z-index: 20;
+            pointer-events: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-width: 80vw;
+            transition: opacity 0.5s ease;
+        }
+
+        .sgx-panel {
+            background: rgba(5, 5, 5, 0.6);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(50, 82, 123, 0.4);
+            border-left: 3px solid var(--sgx-gold);
+            padding: 15px 20px;
+            clip-path: polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+        }
+
+        .sgx-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: clamp(1rem, 1.5vw, 1.4rem);
+            font-weight: 900;
+            color: var(--sgx-cyan);
+            margin: 0 0 5px 0;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .sgx-telemetry {
+            display: flex;
+            gap: 20px;
+            font-size: 0.75rem;
+            color: #a0aec0;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding-top: 10px;
+            margin-bottom: 10px;
+        }
+
+        .metric { display: flex; flex-direction: column; }
+        .metric-value { color: #ffffff; font-weight: 700; font-size: 1rem; }
+
+        /* --- BOTONES --- */
+        #audio-btn {
+            background: rgba(253, 204, 13, 0.1);
+            color: var(--sgx-gold);
+            border: 1px solid var(--sgx-gold);
+            padding: 10px 15px;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            font-size: 0.8rem;
+            cursor: pointer;
+            clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+            transition: all 0.3s ease;
+        }
+        #audio-btn:hover { background: var(--sgx-gold); color: var(--sgx-black); }
+
+        .upload-section {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            margin-top: 10px;
+            border-top: 1px solid rgba(50, 82, 123, 0.4);
+            padding-top: 10px;
+        }
+
+        .upload-btn {
+            background: transparent;
+            color: #e2e8f0;
+            border: 1px solid rgba(50, 82, 123, 0.8);
+            font-family: 'Roboto Mono', monospace;
+            font-size: 0.65rem;
+            padding: 6px 10px;
+            cursor: pointer;
+            transition: 0.2s;
+            text-align: left;
+            display: flex;
+            justify-content: space-between;
+        }
+        .upload-btn:hover { background: var(--sgx-blue); color: white; }
+        .upload-btn span { color: var(--sgx-cyan); }
+
+        #btn-cinematic {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 30;
+            background: rgba(5, 5, 5, 0.5);
+            border: 1px solid var(--sgx-blue);
+            color: var(--sgx-cyan);
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            backdrop-filter: blur(5px);
+            transition: all 0.3s ease;
+        }
+        #btn-cinematic:hover { background: var(--sgx-blue); color: #fff; }
+
+        #cinematic-restore {
+            position: absolute;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: 15;
             pointer-events: none;
         }
 
-        #watermark {
-            position: absolute;
-            bottom: 15px;
-            right: 20px;
-            font-family: 'Courier New', monospace;
-            font-weight: bold;
-            font-size: 0.75rem;
-            color: rgba(255, 255, 255, 0.5);
-            cursor: pointer;
-            z-index: 2000;
-            letter-spacing: 1px;
-            transition: color 0.3s ease;
+        /* --- OVERRIDE LIL-GUI --- */
+        .lil-gui { 
+            --background-color: rgba(5, 5, 5, 0.7);
+            --text-color: #e2e8f0;
+            --title-background-color: #32527B;
+            --widget-color: #1a1a1a;
+            --hover-color: #32527B;
+            --focus-color: #FDCC0D;
+            font-family: 'Roboto Mono', monospace;
+            border: 1px solid var(--sgx-blue);
+            right: 20px !important;
+            top: 70px !important;
+            border-radius: 0 !important;
+            transition: opacity 0.5s ease;
+            z-index: 20;
         }
-        #watermark:hover { color: #FDCC0D; }
-
-        #VRButton {
-            background: rgba(50, 82, 123, 0.9) !important;
-            border: 1px solid #00FFFF !important;
-            color: #00FFFF !important;
-            font-family: 'Courier New', monospace !important;
-            font-weight: bold !important;
-            text-transform: uppercase !important;
-            box-shadow: 0 4px 15px rgba(0, 255, 255, 0.3) !important;
-            left: calc(50% - 120px) !important;
-            width: 110px !important;
-        }
-
-        #ARButton {
-            background: rgba(253, 204, 13, 0.9) !important;
-            border: 1px solid #FDCC0D !important;
-            color: #111827 !important;
-            font-family: 'Courier New', monospace !important;
-            font-weight: bold !important;
-            text-transform: uppercase !important;
-            box-shadow: 0 4px 15px rgba(253, 204, 13, 0.4) !important;
-            left: calc(50% + 10px) !important;
-            width: 110px !important;
-        }
-
-        #GyroButton {
-            position: absolute;
-            background: rgba(50, 82, 123, 0.9);
-            border: 1px solid #32527B;
-            color: #ffffff;
-            font-family: 'Courier New', monospace;
-            font-weight: bold;
-            font-size: 0.7rem;
-            text-transform: uppercase;
-            box-shadow: 0 4px 15px rgba(50, 82, 123, 0.4);
-            bottom: 15px;
-            left: 20px;
-            width: 100px;
-            padding: 8px 0;
-            cursor: pointer;
-            z-index: 999;
-            transition: all 0.3s ease;
-            border-radius: 4px;
-        }
-
-        .action-btn {
-            position: absolute;
-            background: rgba(184, 115, 51, 0.9);
-            border: 1px solid #FDCC0D;
-            color: #FDCC0D;
-            font-family: 'Courier New', monospace;
-            font-weight: bold;
-            text-transform: uppercase;
-            box-shadow: 0 4px 15px rgba(253, 204, 13, 0.4);
-            padding: 12px 20px;
-            cursor: pointer;
-            z-index: 1000;
-            display: none; 
-            transition: all 0.3s ease;
-            clip-path: polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px);
-        }
-        .action-btn:hover { background: #FDCC0D; color: #050505; }
         
-        #ExitButton { top: 20px; right: 20px; }
-        #ImmersionButton { top: 80px; right: 20px; background: rgba(50, 82, 123, 0.9); border-color: #00FFFF; color: #00FFFF; }
-        #ImmersionButton:hover { background: #00FFFF; color: #050505; }
-
-        #loading-overlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(209, 213, 219, 0.95); 
-            z-index: 100;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            color: #32527B;
-            font-family: 'Courier New', monospace;
-            transition: opacity 1s ease;
-        }
-        .spinner {
-            width: 50px; height: 50px;
-            border: 3px solid rgba(50, 82, 123, 0.3);
-            border-top-color: #32527B;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-bottom: 20px;
-        }
+        #audio-meter { width: 100%; height: 3px; background: rgba(255,255,255,0.1); margin-top: 5px; }
+        #audio-level { height: 100%; width: 0%; background: var(--sgx-cyan); transition: width 0.1s; }
     </style>
 </head>
 <body>
-    <div id="loading-overlay">
-        <div class="spinner"></div>
-        <h2 id="loading-text" class="blink">INICIALIZANDO HUB...</h2>
+
+    <!-- OVERLAYS DE IMÁGENES -->
+    <!-- Logo Central Dinámico (Audio React) -->
+    <img id="visual-center" class="visual-overlay" style="display:none;" alt="Center Visual">
+    
+    <!-- Auspiciadores Fijos -->
+    <img id="visual-bl" class="visual-overlay" src="https://static.wixstatic.com/media/fe81a7_68a5da16aefe4e09aee2c6679b885c63~mv2.png" alt="Left Logo">
+    <img id="visual-br" class="visual-overlay" src="https://static.wixstatic.com/media/fe81a7_0f3430b416ef4d1e8c065fe5251716cd~mv2.png" alt="Right Logo">
+
+    <!-- MARCA DE AGUA CENTRADA Y GLOWY -->
+    <div id="sgx-watermark">
+        POWERED BY SPATIALGINEERS
+        <span class="restore-hint" id="restore-hint">[ CLICK PARA RESTAURAR UI ]</span>
     </div>
 
-    <div id="watermark">POWERED BY SPATIALGINEERS</div>
+    <button id="btn-cinematic" title="Ocultar UI (Modo Cinemático)">👁️</button>
+    <div id="cinematic-restore"></div>
 
-    <div id="hud" class="hideable">
-        <h2>ECOSISTEMA SGX</h2>
-        <p>LOS 6 PILARES</p>
-        <p id="status-text" style="color: #FDCC0D; margin-top: 10px;">SELECCIONA UN PILAR PARA EXPLORAR</p>
+    <div id="hud-container">
+        <button id="audio-btn">🎤 INIT SENSOR ACÚSTICO</button>
+        <div class="sgx-panel">
+            <h1 class="sgx-title">DEJANDO HUELLAS FEST</h1>
+            <div class="sgx-telemetry">
+                <div class="metric">
+                    <span>ENTIDADES</span>
+                    <span class="metric-value" id="count-display">8,000</span>
+                </div>
+                <div class="metric">
+                    <span>FPS</span>
+                    <span class="metric-value" id="fps-display">00.0</span>
+                </div>
+            </div>
+            <div id="audio-meter"><div id="audio-level"></div></div>
+
+            <!-- ASSETS INJECTOR (Solo Central) -->
+            <div class="upload-section">
+                <span style="font-size: 0.6rem; color: var(--sgx-gold); letter-spacing: 1px;">// VJ ASSETS INJECTOR</span>
+                <button class="upload-btn" onclick="document.getElementById('file-center').click()">LOGO CENTRAL (AUDIO-REACT) <span>[+]</span></button>
+            </div>
+            <input type="file" id="file-center" accept="image/*" style="display:none;">
+        </div>
     </div>
-
-    <button id="ExitButton" class="action-btn hideable">VOLVER AL HUB</button>
-    <button id="ImmersionButton" class="action-btn hideable">MODO INMERSIVO</button>
-
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
-            }
-        }
-    </script>
 
     <script type="module">
-        import * as THREE from 'three';
-        import { ARButton } from 'three/addons/webxr/ARButton.js';
-        import { VRButton } from 'three/addons/webxr/VRButton.js';
-        import { XRControllerModelFactory } from 'three/addons/webxr/XRControllerModelFactory.js';
-        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-        import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
-        import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js';
-        import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
-        import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+        import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+        import GUI from 'https://unpkg.com/lil-gui@0.19.1/dist/lil-gui.esm.min.js';
 
-        // --- MANEJO DE WATERMARK ---
-        document.getElementById('watermark').addEventListener('click', () => {
-            document.body.classList.toggle('ui-hidden');
+        // Global Error Catcher
+        window.onerror = function(msg, url, lineNo) {
+            const errDiv = document.createElement('div');
+            errDiv.style.color = '#ff0055'; errDiv.style.fontSize = '10px'; errDiv.style.fontFamily = 'monospace';
+            errDiv.innerText = `[SYS_ERROR]: ${msg}`;
+            document.getElementById('hud-container').appendChild(errDiv);
+            return false;
+        };
+
+        // --- 0. ASSETS INJECTOR LOCAL (SOLO CENTRAL) ---
+        document.getElementById('file-center').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if(file) {
+                const img = document.getElementById('visual-center');
+                img.src = URL.createObjectURL(file);
+                img.style.display = 'block';
+            }
         });
 
-        // --- DATA DE LOS PILARES ---
-        const pillarsData = [
-            { id: 'spark', name: 'SPARK', img: 'https://static.wixstatic.com/media/fe81a7_63357760452440439861456c01f55aab~mv2.png', obj: 'https://static.wixstatic.com/3d/fe81a7_1531afe43c6b461c91d99ba7d3dc5471.glb', meta: 'https://static.wixstatic.com/3d/fe81a7_843a1927c3e549608bc3efc9feea0fdf.glb' },
-            { id: 'stage', name: 'STAGE', img: 'https://static.wixstatic.com/media/fe81a7_e29d558ee0cf47999842b043f93fad40~mv2.png', obj: 'https://static.wixstatic.com/3d/fe81a7_4b3620e9d7254d8e9928b9b69d868162.glb', meta: 'https://static.wixstatic.com/3d/fe81a7_2e086a18fa484f12b204953cd62086fe.glb' },
-            { id: 'synthesize', name: 'SYNTHESIZE', img: 'https://static.wixstatic.com/media/fe81a7_d739f22494bf4d14b6392eb89987724b~mv2.png', obj: 'https://static.wixstatic.com/3d/fe81a7_956910e1488344ed9b8ec565ee530680.glb', meta: 'https://video.wixstatic.com/video/fe81a7_a34c9bdce626463cadfb3376fd81faa6/1080p/mp4/file.mp4' },
-            { id: 'story', name: 'STORY', img: 'https://static.wixstatic.com/media/fe81a7_5b8907aac0974f8fbd3cb2e9fc2ecce2~mv2.png', obj: 'https://static.wixstatic.com/3d/fe81a7_fc514d69af094bcd9aef6e753bdd9979.glb', meta: 'https://static.wixstatic.com/3d/fe81a7_c5cc1637970c441ca33e0ce3cd4f5f6b.glb' },
-            { id: 'systems', name: 'SYSTEMS', img: 'https://static.wixstatic.com/media/fe81a7_ebc058d2a7a14ff1b6a41d411ce70550~mv2.png', obj: 'https://static.wixstatic.com/3d/fe81a7_b7c491b988984ed8a8632ff425cc0754.glb', meta: 'https://static.wixstatic.com/3d/fe81a7_928460424ee5494798da259d6fe587d3.glb' },
-            { id: 'showcase', name: 'SHOWCASE', img: 'https://static.wixstatic.com/media/fe81a7_9832d363c6e74e9592dc67f211ce9e37~mv2.png', obj: 'https://static.wixstatic.com/3d/fe81a7_47a02d59fdf14f06887582964950a41e.glb', meta: 'https://static.wixstatic.com/3d/fe81a7_3bd01753acc140c58cfc9698790b6177.glb' }
-        ];
+        // --- 1. UI CINEMATIC TOGGLE ---
+        const btnCinematic = document.getElementById('btn-cinematic');
+        const hudContainer = document.getElementById('hud-container');
+        const cinematicRestore = document.getElementById('cinematic-restore');
+        const restoreHint = document.getElementById('restore-hint');
+        let uiVisible = true;
 
-        // --- 1. CORE ARCHITECTURE & RENDERER ---
+        btnCinematic.addEventListener('click', () => {
+            uiVisible = false;
+            hudContainer.style.opacity = '0'; hudContainer.style.pointerEvents = 'none';
+            btnCinematic.style.opacity = '0'; btnCinematic.style.pointerEvents = 'none';
+            if(window.sgxGui) { window.sgxGui.domElement.style.opacity = '0'; window.sgxGui.domElement.style.pointerEvents = 'none'; }
+            restoreHint.style.opacity = '0.5';
+            cinematicRestore.style.pointerEvents = 'auto'; 
+        });
+
+        cinematicRestore.addEventListener('click', () => {
+            if(!uiVisible) {
+                uiVisible = true;
+                hudContainer.style.opacity = '1'; hudContainer.style.pointerEvents = 'auto';
+                btnCinematic.style.opacity = '1'; btnCinematic.style.pointerEvents = 'auto';
+                if(window.sgxGui) { window.sgxGui.domElement.style.opacity = '1'; window.sgxGui.domElement.style.pointerEvents = 'auto'; }
+                restoreHint.style.opacity = '0';
+                cinematicRestore.style.pointerEvents = 'none';
+            }
+        });
+
+        // --- 2. CORE ARCHITECTURE SETUP ---
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0xd1d5db); 
-        scene.fog = new THREE.FogExp2(0xd1d5db, 0.02); 
+        scene.fog = new THREE.FogExp2(0x050505, 0.012);
 
-        const playerRig = new THREE.Group();
-        playerRig.position.set(0, 0, 0); 
-        scene.add(playerRig);
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 0, 40); 
 
-        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 2000);
-        camera.position.set(0, 1.6, 0); 
-        playerRig.add(camera);
-
-        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance", alpha: true });
+        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.xr.enabled = true; 
-        renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 1.0; 
+        renderer.setClearColor(0x050505);
         document.body.appendChild(renderer.domElement);
 
-        // --- MANEJO DE CAPACIDADES WEBXR & GIROSCOPIO ---
-        const vrBtn = VRButton.createButton(renderer);
-        const arBtn = ARButton.createButton(renderer);
-        vrBtn.classList.add('hideable');
-        arBtn.classList.add('hideable');
-        document.body.appendChild(vrBtn);
-        document.body.appendChild(arBtn);
+        // --- 3. HARDWARE TEXTURE LOADER (CERO CORS ERROR) ---
+        // Como tu nueva imagen ya es transparente, usamos el loader nativo sin el hackeo GLSL
+        const loader = new THREE.TextureLoader();
+        loader.setCrossOrigin('anonymous');
+        const cacheBuster = "?v=" + Date.now();
+        // PNG de la Huella Sin Background
+        const pawUrl = "https://static.wixstatic.com/media/fe81a7_15bf73d9cc0246549b2d9dbb41dc130b~mv2.png" + cacheBuster;
+        const particleTex = loader.load(pawUrl);
 
-        if ('xr' in navigator) {
-            navigator.xr.isSessionSupported('immersive-vr').then(supported => {
-                if(!supported) vrBtn.style.display = 'none';
-            });
-            navigator.xr.isSessionSupported('immersive-ar').then(supported => {
-                if(!supported) arBtn.style.display = 'none';
-            });
-        } else {
-            vrBtn.style.display = 'none';
-            arBtn.style.display = 'none';
-        }
-
-        class CustomGyroControls {
-            constructor(object) {
-                this.object = object;
-                this.enabled = true;
-                this.deviceOrientation = {};
-                this.screenOrientation = window.orientation || 0;
-                this.onDeviceOrientationChangeEvent = (e) => { this.deviceOrientation = e; };
-                this.onScreenOrientationChangeEvent = () => { this.screenOrientation = window.orientation || 0; };
-                window.addEventListener('orientationchange', this.onScreenOrientationChangeEvent);
-                window.addEventListener('deviceorientation', this.onDeviceOrientationChangeEvent);
-            }
-            disconnect() {
-                window.removeEventListener('orientationchange', this.onScreenOrientationChangeEvent);
-                window.removeEventListener('deviceorientation', this.onDeviceOrientationChangeEvent);
-                this.enabled = false;
-            }
-            update() {
-                if (!this.enabled) return;
-                const alpha = this.deviceOrientation.alpha ? THREE.MathUtils.degToRad(this.deviceOrientation.alpha) : 0;
-                const beta = this.deviceOrientation.beta ? THREE.MathUtils.degToRad(this.deviceOrientation.beta) : 0;
-                const gamma = this.deviceOrientation.gamma ? THREE.MathUtils.degToRad(this.deviceOrientation.gamma) : 0;
-                const orient = this.screenOrientation ? THREE.MathUtils.degToRad(this.screenOrientation) : 0;
-                const euler = new THREE.Euler(beta, alpha, -gamma, 'YXZ');
-                const q0 = new THREE.Quaternion();
-                const q1 = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5));
-                const zee = new THREE.Vector3(0, 0, 1);
-                this.object.quaternion.setFromEuler(euler);
-                this.object.quaternion.multiply(q1);
-                this.object.quaternion.multiply(q0.setFromAxisAngle(zee, -orient));
-            }
-        }
-
-        let gyroControls = null;
-        let useGyro = false;
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
-        const controls = new OrbitControls(camera, renderer.domElement);
-        controls.target.set(0, 1.6, -0.1); 
-        controls.enableDamping = true;
-        controls.enableZoom = false;
-        controls.enablePan = false;
-
-        if (isMobile) {
-            const gyroBtn = document.createElement('button');
-            gyroBtn.id = 'GyroButton';
-            gyroBtn.className = 'hideable';
-            gyroBtn.innerText = 'GIROSCOPIO';
-            document.body.appendChild(gyroBtn);
-
-            gyroBtn.addEventListener('click', () => {
-                if (!gyroControls) {
-                    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                        DeviceOrientationEvent.requestPermission().then(permissionState => {
-                            if (permissionState === 'granted') {
-                                enableGyro();
-                            } else {
-                                alert("Permiso de giroscopio denegado por el dispositivo.");
-                            }
-                        }).catch(console.error);
-                    } else {
-                        enableGyro();
-                    }
-                } else {
-                    useGyro = false;
-                    gyroControls.disconnect();
-                    gyroControls = null;
-                    controls.enabled = true; // Restauramos tacto orbital
-                    
-                    camera.quaternion.identity(); 
-                    camera.position.set(0, 1.6, 0); 
-                    controls.target.set(0, 1.6, -0.1);
-                    controls.update();
-
-                    gyroBtn.style.background = 'rgba(50, 82, 123, 0.9)';
-                    gyroBtn.style.color = '#ffffff';
-                    gyroBtn.innerText = 'GIROSCOPIO';
-                }
-            });
-
-            function enableGyro() {
-                gyroControls = new CustomGyroControls(camera);
-                useGyro = true;
-                controls.enabled = false; // El giroscopio toma el control, permitiendo tacto libre
-                const btn = document.getElementById('GyroButton');
-                btn.style.background = '#FDCC0D';
-                btn.style.color = '#111827';
-                btn.innerText = 'GIRO ACTIVO';
-            }
-        }
-
-        // --- 2. ENVIRONMENT & LIGHTING ---
-        new RGBELoader()
-            .load('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/textures/equirectangular/studio_small_08_1k.hdr', function (texture) {
-                texture.mapping = THREE.EquirectangularReflectionMapping;
-                scene.environment = texture; 
-            });
-        
-        const hemiLight = new THREE.HemisphereLight(0xffffff, 0xb0bec5, 0.6);
-        scene.add(hemiLight);
-
-        scene.add(new THREE.AmbientLight(0xffffff, 0.4)); 
-        
-        const cyanLight = new THREE.DirectionalLight(0x00FFFF, 1.0);
-        cyanLight.position.set(-5, 5, 2);
-        scene.add(cyanLight);
-
-        const goldLight = new THREE.DirectionalLight(0xFDCC0D, 1.0);
-        goldLight.position.set(5, 5, 2);
-        scene.add(goldLight);
-
-        // --- 3. GROUPS & LOADERS ---
-        const hubGroup = new THREE.Group();
-        scene.add(hubGroup);
-        
-        const metaverseGroup = new THREE.Group();
-        scene.add(metaverseGroup);
-
-        const interactables = []; 
-        const floatingObjects = []; 
-        let currentMaqueta = null; 
-        let isTransitioning = false; 
-        let currentVideoElement = null;
-
-        let baseMaquetaScale = 1;
-        let isImmersiveScale = false;
-        let immersionButton3D = null;
-
-        const dracoLoader = new DRACOLoader();
-        dracoLoader.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/gltf/');
-        const ktx2Loader = new KTX2Loader().setTranscoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/basis/').detectSupport(renderer);
-        const gltfLoader = new GLTFLoader().setCrossOrigin('anonymous').setDRACOLoader(dracoLoader).setKTX2Loader(ktx2Loader).setMeshoptDecoder(MeshoptDecoder);
-        const textureLoader = new THREE.TextureLoader().setCrossOrigin('anonymous');
-
-        function enhancePBRMaterial(object) {
-            object.traverse((child) => {
-                if (child.isMesh && child.material) {
-                    child.material.envMapIntensity = 1.5; 
-                    if (child.material.color) {
-                        child.material.emissive = child.material.color;
-                        child.material.emissiveIntensity = 0.2; 
-                    }
-                    if (child.material.map) {
-                        child.material.emissiveMap = child.material.map;
-                        child.material.emissiveIntensity = 0.2; 
-                    }
-                    child.material.needsUpdate = true;
-                }
-            });
-        }
-
-        const floorGrid = new THREE.GridHelper(100, 100, 0xFDCC0D, 0xFDCC0D);
-        floorGrid.material.transparent = true;
-        floorGrid.material.opacity = 0.6; 
-        floorGrid.position.y = 0;
-        hubGroup.add(floorGrid);
-
-        renderer.xr.addEventListener('sessionstart', () => {
-            const session = renderer.xr.getSession();
-            if (session && session.mode === 'immersive-ar') {
-                scene.background = null;
-                scene.fog = null;
-                floorGrid.visible = false;
-            }
-        });
-        renderer.xr.addEventListener('sessionend', () => {
-            scene.background = new THREE.Color(0xd1d5db); 
-            scene.fog = new THREE.FogExp2(0xd1d5db, 0.02);
-            floorGrid.visible = true;
-            playerRig.position.set(0, 0, 0); 
+        // Material Limpio y Optimizado (Usa Additive Blending para brillar)
+        const material = new THREE.MeshBasicMaterial({
+            color: 0xffffff,
+            map: particleTex, 
+            transparent: true,
+            opacity: 0.9,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false,
+            side: THREE.DoubleSide
         });
 
-        // --- 4. HUB CREATION ---
-        function createUIPanel(text, borderColor) {
-            const canvas = document.createElement('canvas');
-            canvas.width = 512; canvas.height = 128;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = 'rgba(17, 24, 39, 0.9)'; 
-            ctx.fillRect(0, 0, 512, 128);
-            ctx.strokeStyle = borderColor;
-            ctx.lineWidth = 8;
-            ctx.strokeRect(4, 4, 504, 120);
+        // --- 4. DATA STRUCTURE ---
+        const PARAMS = {
+            count: 8000, 
+            baseEnergy: 0.3,      
+            swarmVelocity: 0.8,   
+            pawScale: 1.0,
+            parallaxWarp: 0.03,   
+            audioSensitivity: 1.0,
+            autoPilot: true
+        };
+
+        const SGX_COLORS = [
+            new THREE.Color(0x32527B), // Azul 
+            new THREE.Color(0xFDCC0D), // Oro 
+            new THREE.Color(0xB87333), // Cobre 
+            new THREE.Color(0x00FFFF)  // Cyan
+        ];
+
+        // Mapeo Estricto de Tamaños
+        const COLOR_SCALES = [0.6, 1.8, 1.3, 1.0];
+
+        const geometry = new THREE.PlaneGeometry(0.5, 0.5); 
+        const instancedMesh = new THREE.InstancedMesh(geometry, material, PARAMS.count);
+        scene.add(instancedMesh);
+
+        const stride = 9;
+        const pData = new Float32Array(PARAMS.count * stride); 
+        const dummy = new THREE.Object3D();
+        const color = new THREE.Color();
+        const localCameraPos = new THREE.Vector3(); 
+
+        for (let i = 0; i < PARAMS.count; i++) {
+            const idx = i * stride;
+            pData[idx + 0] = (Math.random() - 0.5) * 160; 
+            pData[idx + 1] = (Math.random() - 0.5) * 120; 
+            pData[idx + 2] = (Math.random() - 0.5) * 160 - 20; 
+            pData[idx + 3] = (Math.random() * 0.5 + 0.1);  
+            pData[idx + 4] = Math.random() * 100;          
+
+            const cIdx = Math.floor(Math.random() * SGX_COLORS.length);
+            pData[idx + 5] = COLOR_SCALES[cIdx];           
             
-            ctx.fillStyle = '#FDCC0D'; 
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.font = 'bold 36px Courier New'; 
-            ctx.fillText(text, 256, 64);
-            
-            const tex = new THREE.CanvasTexture(canvas);
-            tex.colorSpace = THREE.SRGBColorSpace; 
-            return tex;
+            pData[idx + 6] = (Math.random() - 0.5) * 5.0;  
+            pData[idx + 7] = (Math.random() - 0.5) * 2.0;  
+            pData[idx + 8] = (Math.random() - 0.5) * 5.0;  
+
+            color.copy(SGX_COLORS[cIdx]);
+            if(Math.random() > 0.7) color.lerp(new THREE.Color(0xffffff), 0.5); 
+            instancedMesh.setColorAt(i, color);
         }
+        instancedMesh.instanceColor.needsUpdate = true;
 
-        async function buildHub() {
-            const radius = 3.5;
-            const angleStep = (Math.PI * 2) / pillarsData.length;
+        // --- 5. AUDIO ENGINE ---
+        let audioCtx, analyser, dataArray;
+        let audioActive = false;
+        let smoothBass = 0, smoothMids = 0, smoothTreble = 0;
 
-            for (let i = 0; i < pillarsData.length; i++) {
-                const data = pillarsData[i];
-                const angle = i * angleStep;
+        document.getElementById('audio-btn').addEventListener('click', async () => {
+            try {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 256;
+                const source = audioCtx.createMediaStreamSource(stream);
+                source.connect(analyser);
+                dataArray = new Uint8Array(analyser.frequencyBinCount);
                 
-                const px = Math.sin(angle) * radius;
-                const pz = Math.cos(angle) * radius;
+                audioActive = true;
+                const btn = document.getElementById('audio-btn');
+                btn.innerText = "⚡ SENSOR ACTIVO";
+                btn.style.background = "var(--sgx-cyan)";
+                btn.style.color = "var(--sgx-black)";
+                setTimeout(() => btn.style.display = 'none', 1500);
 
-                const pillarGroup = new THREE.Group();
-                pillarGroup.position.set(px, 0, pz);
-                pillarGroup.lookAt(0, 0, 0); 
-                hubGroup.add(pillarGroup);
-
-                const pedGeo = new THREE.CylinderGeometry(0.5, 0.6, 0.2, 16);
-                const pedMat = new THREE.MeshStandardMaterial({ color: 0x1f2937, metalness: 0.8, roughness: 0.2 });
-                const pedestal = new THREE.Mesh(pedGeo, pedMat);
-                pedestal.position.y = 0.1;
-                pillarGroup.add(pedestal);
-
-                const ringGeo = new THREE.TorusGeometry(0.5, 0.015, 16, 64);
-                const ringMat = new THREE.MeshBasicMaterial({ color: 0x32527B }); 
-                const ring = new THREE.Mesh(ringGeo, ringMat);
-                ring.position.y = 0.2;
-                ring.rotation.x = Math.PI / 2;
-                pillarGroup.add(ring);
-
-                textureLoader.load(data.img, (tex) => {
-                    tex.colorSpace = THREE.SRGBColorSpace; 
-                    
-                    const planeGeo = new THREE.PlaneGeometry(1.56, 1.56);
-                    const planeMat = new THREE.MeshBasicMaterial({ 
-                        map: tex, transparent: true, opacity: 1.0, toneMapped: false 
-                    });
-                    const plane = new THREE.Mesh(planeGeo, planeMat);
-                    plane.position.set(0, 1.7, -0.2); 
-                    pillarGroup.add(plane);
-                });
-
-                gltfLoader.load(data.obj, (gltf) => {
-                    const model = gltf.scene;
-                    enhancePBRMaterial(model); 
-
-                    const box = new THREE.Box3().setFromObject(model);
-                    const center = box.getCenter(new THREE.Vector3());
-                    const size = box.getSize(new THREE.Vector3()).length();
-
-                    model.position.x -= center.x;
-                    model.position.y -= center.y;
-                    model.position.z -= center.z;
-
-                    const scale = 0.91 / size; 
-                    model.scale.setScalar(scale);
-
-                    const floater = new THREE.Group();
-                    floater.position.set(0, 1.1, 0);
-                    floater.add(model);
-                    pillarGroup.add(floater);
-                    floatingObjects.push(floater);
-                });
-
-                const uiGeo = new THREE.PlaneGeometry(0.8, 0.2);
-                const texIdle = createUIPanel(`ENTRAR A ${data.name}`, '#32527B');
-                const texHover = createUIPanel(`ENTRAR A ${data.name}`, '#00FFFF');
-                
-                const uiMat = new THREE.MeshBasicMaterial({ map: texIdle, transparent: true, toneMapped: false });
-                const uiMesh = new THREE.Mesh(uiGeo, uiMat);
-                uiMesh.position.set(0, 0.6, 0.2);
-                uiMesh.rotation.x = -Math.PI * 0.1;
-                
-                uiMesh.userData = {
-                    isButton: true,
-                    texIdle: texIdle,
-                    texHover: texHover,
-                    onClick: () => loadMetaverse(data)
-                };
-                
-                pillarGroup.add(uiMesh);
-                interactables.push(uiMesh);
+                if (audioCtx.state === 'suspended') await audioCtx.resume();
+            } catch (err) {
+                console.error("Audio denied:", err);
             }
-
-            setTimeout(() => {
-                document.getElementById('loading-overlay').style.opacity = '0';
-                setTimeout(() => document.getElementById('loading-overlay').style.display = 'none', 1000);
-            }, 1500);
-        }
-
-        buildHub();
-
-        // --- 5. METAVERSE (MAQUETA) SYSTEM ---
-        
-        // Listeners Botones HTML
-        document.getElementById('ExitButton').addEventListener('click', returnToHub);
-        document.getElementById('ImmersionButton').addEventListener('click', toggleImmersion);
-
-        function toggleImmersion() {
-            if (!currentMaqueta) return;
-            isImmersiveScale = !isImmersiveScale;
-            
-            const newText = isImmersiveScale ? 'MODO MAQUETA' : 'MODO INMERSIVO';
-            document.getElementById('ImmersionButton').innerText = newText;
-
-            if (isImmersiveScale) {
-                currentMaqueta.scale.setScalar(baseMaquetaScale * 12.0);
-                currentMaqueta.position.y = -2.5; 
-            } else {
-                currentMaqueta.scale.setScalar(baseMaquetaScale);
-                currentMaqueta.position.y = 1.0; 
-            }
-        }
-
-        function loadMetaverse(data) {
-            if (isTransitioning || currentMaqueta) return;
-            isTransitioning = true; 
-            hubGroup.visible = false;
-            
-            const overlay = document.getElementById('loading-overlay');
-            document.getElementById('loading-text').innerText = `INICIANDO CONEXIÓN A METAVERSO...`;
-            overlay.style.display = 'flex';
-            setTimeout(() => overlay.style.opacity = '1', 10);
-
-            // MANEJO DE VIDEO 360 (Synthesize)
-            if (data.meta && data.meta.endsWith('.mp4')) {
-                const video = document.createElement('video');
-                video.style.display = 'none'; // Inyectado invisiblemente para evitar pausas del navegador
-                video.src = data.meta;
-                video.crossOrigin = 'anonymous';
-                video.loop = true;
-                video.muted = true;
-                video.playsInline = true;
-                document.body.appendChild(video);
-                video.play().catch(e => console.warn('Autoplay bloqueado por el navegador:', e));
-                currentVideoElement = video;
-
-                const texture = new THREE.VideoTexture(video);
-                texture.colorSpace = THREE.SRGBColorSpace;
-                const geo = new THREE.SphereGeometry(500, 60, 40);
-                geo.scale(-1, 1, 1);
-                const mat = new THREE.MeshBasicMaterial({ map: texture });
-                const sphere = new THREE.Mesh(geo, mat);
-                
-                metaverseGroup.add(sphere);
-                currentMaqueta = sphere;
-                
-                playerRig.position.set(0, 0, 0); 
-                camera.position.set(0, 1.6, 0);
-                controls.target.set(0, 1.6, -0.1);
-                controls.enablePan = true;
-                controls.update();
-
-                overlay.style.opacity = '0';
-                setTimeout(() => { overlay.style.display = 'none'; isTransitioning = false; }, 1000);
-                
-                document.getElementById('ExitButton').style.display = 'block';
-                document.getElementById('ImmersionButton').style.display = 'none'; 
-                return;
-            }
-
-            // MANEJO DE MAQUETAS GLB
-            gltfLoader.load(
-                data.meta, 
-                (gltf) => {
-                    const model = gltf.scene;
-                    enhancePBRMaterial(model); 
-                    model.position.set(0,0,0);
-                    model.rotation.set(0,0,0);
-                    model.scale.set(1,1,1);
-
-                    const initialBox = new THREE.Box3().setFromObject(model);
-                    const size = initialBox.getSize(new THREE.Vector3()).length();
-                    baseMaquetaScale = 3.0 / size; 
-                    
-                    isImmersiveScale = false;
-                    document.getElementById('ImmersionButton').innerText = 'MODO INMERSIVO';
-                    
-                    model.scale.setScalar(baseMaquetaScale);
-
-                    const finalBox = new THREE.Box3().setFromObject(model);
-                    const center = finalBox.getCenter(new THREE.Vector3());
-                    model.position.x -= center.x;
-                    model.position.y -= center.y - 1.0; 
-                    model.position.z -= center.z;
-
-                    metaverseGroup.add(model);
-                    currentMaqueta = model;
-
-                    if (!renderer.xr.isPresenting) {
-                        playerRig.position.set(0, 0, 0);
-                        camera.position.set(0, 2.0, 4.0);
-                        controls.target.set(0, 1.0, 0); 
-                        controls.enablePan = true;  
-                        controls.update();
-                    } else {
-                        playerRig.position.set(0, 0, 3.5);
-                    }
-
-                    overlay.style.opacity = '0';
-                    setTimeout(() => { overlay.style.display = 'none'; isTransitioning = false; }, 1000);
-                    
-                    document.getElementById('ExitButton').style.display = 'block';
-                    document.getElementById('ImmersionButton').style.display = 'block';
-                },
-                (xhr) => {
-                    if (xhr.lengthComputable) {
-                        document.getElementById('loading-text').innerText = `DESCARGANDO ${data.name}: ${Math.round((xhr.loaded / xhr.total) * 100)}%`;
-                    } else {
-                        document.getElementById('loading-text').innerText = `DESCARGANDO ${data.name}: ${(xhr.loaded / (1024 * 1024)).toFixed(1)} MB...`;
-                    }
-                },
-                (error) => {
-                    document.getElementById('loading-text').innerText = `ERROR DE RED. VOLVIENDO AL HUB...`;
-                    document.getElementById('loading-text').style.color = '#ff0000'; 
-                    setTimeout(() => {
-                        returnToHub(); 
-                        overlay.style.opacity = '0';
-                        setTimeout(() => { overlay.style.display = 'none'; document.getElementById('loading-text').style.color = '#00FFFF'; isTransitioning = false; }, 1000);
-                    }, 3000);
-                }
-            );
-        }
-
-        function returnToHub() {
-            if (isTransitioning && currentMaqueta === null && !currentVideoElement) return;
-
-            // Limpieza de Video
-            if (currentVideoElement) {
-                currentVideoElement.pause();
-                currentVideoElement.src = '';
-                currentVideoElement.remove(); // Limpieza pura del DOM
-                currentVideoElement = null;
-            }
-
-            // Purgar maquetas/esferas
-            while (metaverseGroup.children.length > 0) {
-                metaverseGroup.remove(metaverseGroup.children[0]);
-            }
-            currentMaqueta = null;
-            
-            if (!renderer.xr.isPresenting) {
-                playerRig.position.set(0, 0, 0);
-                camera.position.set(0, 1.6, 0);
-                controls.target.set(0, 1.6, -0.1);
-                controls.enableZoom = false; 
-                controls.enablePan = false;  
-                controls.update();
-            } else {
-                playerRig.position.set(0, 0, 0);
-            }
-
-            hubGroup.visible = true;
-            document.getElementById('ExitButton').style.display = 'none';
-            document.getElementById('ImmersionButton').style.display = 'none';
-        }
-
-        // --- 6. LOCOMOTION & INTERACTION ---
-        const raycaster = new THREE.Raycaster();
-        const tempMatrix = new THREE.Matrix4();
-        let hoveredObject = null;
-
-        const controller1 = renderer.xr.getController(0);
-        controller1.addEventListener('selectstart', onSelectStart);
-        playerRig.add(controller1);
-
-        const controller2 = renderer.xr.getController(1);
-        controller2.addEventListener('selectstart', onSelectStart);
-        playerRig.add(controller2);
-
-        const controllerModelFactory = new XRControllerModelFactory();
-        const grip1 = renderer.xr.getControllerGrip(0);
-        grip1.add(controllerModelFactory.createControllerModel(grip1));
-        playerRig.add(grip1);
-        const grip2 = renderer.xr.getControllerGrip(1);
-        grip2.add(controllerModelFactory.createControllerModel(grip2));
-        playerRig.add(grip2);
-
-        const laserGeometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1)]);
-        const laserMaterial = new THREE.LineBasicMaterial({ color: 0x00FFFF, blending: THREE.AdditiveBlending });
-        const laser1 = new THREE.Line(laserGeometry, laserMaterial); laser1.scale.z = 5; controller1.add(laser1);
-        const laser2 = new THREE.Line(laserGeometry, laserMaterial); laser2.scale.z = 5; controller2.add(laser2);
-
-        // Movimiento Libre Teclado
-        const keys = { w: false, a: false, s: false, d: false };
-        window.addEventListener('keydown', e => {
-            if(e.key.toLowerCase() === 'w') keys.w = true;
-            if(e.key.toLowerCase() === 'a') keys.a = true;
-            if(e.key.toLowerCase() === 's') keys.s = true;
-            if(e.key.toLowerCase() === 'd') keys.d = true;
-        });
-        window.addEventListener('keyup', e => {
-            if(e.key.toLowerCase() === 'w') keys.w = false;
-            if(e.key.toLowerCase() === 'a') keys.a = false;
-            if(e.key.toLowerCase() === 's') keys.s = false;
-            if(e.key.toLowerCase() === 'd') keys.d = false;
         });
 
-        // ----------------------------------------------------
-        // LÓGICA TÁCTIL Y DE RATÓN LIMPIA Y SIN CONFLICTOS
-        // ----------------------------------------------------
+        function updateAudioData() {
+            if (!audioActive) return;
+            analyser.getByteFrequencyData(dataArray);
+            
+            let b = 0, m = 0, t = 0;
+            for(let i = 0; i < 8; i++) b += dataArray[i];    
+            for(let i = 8; i < 24; i++) m += dataArray[i];   
+            for(let i = 24; i < 64; i++) t += dataArray[i];
+            
+            const rawBass = (b / 8) / 255;
+            const rawMids = (m / 16) / 255;
+            const rawTreble = (t / 40) / 255;
+
+            smoothBass += (rawBass - smoothBass) * 0.15;
+            smoothMids += (rawMids - smoothMids) * 0.15;
+            smoothTreble += (rawTreble - smoothTreble) * 0.15;
+
+            document.getElementById('audio-level').style.width = `${Math.min(smoothBass * 100 * PARAMS.audioSensitivity, 100)}%`;
+        }
+
+        // --- 6. INTERACTION ---
         const mouse = new THREE.Vector2();
-        let isTouchingMobile = false;
+        const targetPos = new THREE.Vector3(0, 0, 0);
+        const currentPos = new THREE.Vector3(0, 0, 0);
 
-        // Actualizar coordenadas del ratón sólo para el hover visual
-        window.addEventListener('pointermove', (e) => {
-            if (renderer.xr.isPresenting) return;
-            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-            raycaster.setFromCamera(mouse, camera);
-            checkIntersections(raycaster);
-        });
-
-        // Evento CLIC dedicado para la interacción 3D (Botones de pilares/HUD 3D)
-        // Esto evita que al arrastrar la cámara se disparen clics por accidente
-        window.addEventListener('click', (e) => {
-            if (renderer.xr.isPresenting) return;
-            // Evitar conflicto con los botones de la interfaz HTML 2D
-            if (e.target.tagName === 'BUTTON' || e.target.id === 'watermark') return;
-            
-            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-            raycaster.setFromCamera(mouse, camera);
-            
-            const activeInteractables = interactables.filter(obj => obj.visible && (obj.parent === hubGroup ? hubGroup.visible : true));
-            const intersects = raycaster.intersectObjects(activeInteractables, false);
-
-            if (intersects.length > 0) {
-                intersects[0].object.userData.onClick();
-            }
-        });
-
-        // Locomoción Móvil (Avanzar) aislada: Sólo funciona si el giroscopio está activo 
-        // y tocamos explícitamente el canvas de renderizado (no la UI).
-        renderer.domElement.addEventListener('pointerdown', (e) => {
-            if (useGyro && !renderer.xr.isPresenting) {
-                isTouchingMobile = true;
-            }
-        });
-        renderer.domElement.addEventListener('pointerup', () => { 
-            isTouchingMobile = false; 
-        });
-        renderer.domElement.addEventListener('pointerleave', () => { 
-            isTouchingMobile = false; 
-        });
-
-        function onSelectStart(event) {
-            tempMatrix.identity().extractRotation(event.target.matrixWorld);
-            raycaster.ray.origin.setFromMatrixPosition(event.target.matrixWorld);
-            raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
-            
-            const activeInteractables = interactables.filter(obj => obj.visible && (obj.parent === hubGroup ? hubGroup.visible : true));
-            const intersects = raycaster.intersectObjects(activeInteractables, false);
-            if (intersects.length > 0) {
-                intersects[0].object.userData.onClick();
-            }
+        function handleInput(clientX, clientY) {
+            PARAMS.autoPilot = false; 
+            mouse.x = (clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(clientY / window.innerHeight) * 2 + 1;
+            targetPos.x = mouse.x * 15; 
+            targetPos.y = mouse.y * 10;
         }
 
-        function checkIntersections(rc) {
-            const activeInteractables = interactables.filter(obj => obj.visible && (obj.parent === hubGroup ? hubGroup.visible : true));
-            const intersects = rc.intersectObjects(activeInteractables, false);
-
-            if (intersects.length > 0) {
-                const object = intersects[0].object;
-                if (hoveredObject !== object) {
-                    if (hoveredObject) hoveredObject.material.map = hoveredObject.userData.texIdle;
-                    hoveredObject = object;
-                    hoveredObject.material.map = hoveredObject.userData.texHover;
-                    document.body.style.cursor = 'pointer';
-                }
-            } else {
-                if (hoveredObject) {
-                    hoveredObject.material.map = hoveredObject.userData.texIdle;
-                    hoveredObject = null;
-                    document.body.style.cursor = 'default';
-                }
-            }
-        }
-
-        function updateVRRaycasting() {
-            let rc = new THREE.Raycaster();
-            const activeInteractables = interactables.filter(obj => obj.visible && (obj.parent === hubGroup ? hubGroup.visible : true));
-            
-            tempMatrix.identity().extractRotation(controller1.matrixWorld);
-            rc.ray.origin.setFromMatrixPosition(controller1.matrixWorld);
-            rc.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
-            let intersects = rc.intersectObjects(activeInteractables, false);
-            
-            if(intersects.length === 0) {
-                tempMatrix.identity().extractRotation(controller2.matrixWorld);
-                rc.ray.origin.setFromMatrixPosition(controller2.matrixWorld);
-                rc.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
-                intersects = rc.intersectObjects(activeInteractables, false);
-            }
-            checkIntersections(rc);
-        }
-
-        function handleLocomotion() {
-            const session = renderer.xr.getSession();
-            if (!session || !session.inputSources) return;
-            for (const source of session.inputSources) {
-                if (source.gamepad) {
-                    const axes = source.gamepad.axes;
-                    let xAxis = axes.length >= 4 ? axes[2] : axes[0];
-                    let yAxis = axes.length >= 4 ? axes[3] : axes[1];
-
-                    if (Math.abs(xAxis) > 0.15 || Math.abs(yAxis) > 0.15) {
-                        const quaternion = new THREE.Quaternion();
-                        camera.getWorldQuaternion(quaternion);
-                        const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(quaternion);
-                        const right = new THREE.Vector3(1, 0, 0).applyQuaternion(quaternion);
-                        
-                        forward.y = 0; right.y = 0; 
-                        forward.normalize(); right.normalize();
-                        
-                        playerRig.position.addScaledVector(forward, -yAxis * 0.1);
-                        playerRig.position.addScaledVector(right, xAxis * 0.1);
-                    }
-                }
-            }
-        }
-
+        window.addEventListener('pointermove', (e) => handleInput(e.clientX, e.clientY));
+        window.addEventListener('touchmove', (e) => {
+            if(e.touches.length > 0) handleInput(e.touches[0].clientX, e.touches[0].clientY);
+        });
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        renderer.setAnimationLoop((time) => {
-            if (useGyro && gyroControls) {
-                gyroControls.update();
-            } else {
-                controls.update(); 
+        // --- 7. TACTICAL GUI ---
+        try {
+            window.sgxGui = new GUI({ title: 'CONTROL VJ' });
+            window.sgxGui.add(PARAMS, 'audioSensitivity', 0.1, 3.0).name('Sensibilidad Audio');
+            window.sgxGui.add(PARAMS, 'baseEnergy', 0.05, 1.0).name('Energía Base');
+            window.sgxGui.add(PARAMS, 'swarmVelocity', 0.0, 3.0).name('Velocidad Estelar');
+            window.sgxGui.add(PARAMS, 'pawScale', 0.1, 3.0).name('Tamaño Huellas');
+        } catch(e) {}
+
+        // --- 8. RENDER LOOP & VJ EFFECTS ---
+        const clock = new THREE.Clock();
+        let frameCount = 0;
+        let lastTime = performance.now();
+        let globalElapsedTime = 0;
+        const fpsDisplay = document.getElementById('fps-display');
+        const centerImage = document.getElementById('visual-center');
+
+        function updateSystem() {
+            requestAnimationFrame(updateSystem);
+            updateAudioData();
+
+            const dt = clock.getDelta(); 
+            const audioMult = audioActive ? (smoothBass * PARAMS.audioSensitivity) : 0;
+            const flowSpeed = PARAMS.baseEnergy + (audioActive ? smoothMids * PARAMS.audioSensitivity : 0);
+            
+            globalElapsedTime += dt * flowSpeed;
+            const moveDt = dt * (PARAMS.swarmVelocity + audioMult * 3.0); 
+            
+            if (PARAMS.autoPilot) {
+                targetPos.x = Math.sin(globalElapsedTime * 0.1) * 8;
+                targetPos.y = Math.cos(globalElapsedTime * 0.08) * 5;
             }
 
-            // Movimiento Libre 2D (PC / Mobile Gyro)
-            if (currentMaqueta) {
-                const moveSpeed = isImmersiveScale ? 0.2 : 0.05;
-                const dir = new THREE.Vector3();
-                camera.getWorldDirection(dir);
-                dir.y = 0; dir.normalize();
-                const right = new THREE.Vector3().crossVectors(camera.up, dir).normalize();
+            // Parallax
+            currentPos.x += (targetPos.x - currentPos.x) * PARAMS.parallaxWarp;
+            currentPos.y += (targetPos.y - currentPos.y) * PARAMS.parallaxWarp;
 
-                if (keys.w || (isTouchingMobile && useGyro)) playerRig.position.addScaledVector(dir, moveSpeed);
-                if (keys.s) playerRig.position.addScaledVector(dir, -moveSpeed);
-                if (keys.a) playerRig.position.addScaledVector(right, -moveSpeed);
-                if (keys.d) playerRig.position.addScaledVector(right, moveSpeed);
+            camera.position.x = currentPos.x * 0.3;
+            camera.position.y = currentPos.y * 0.3;
+            camera.position.z = 40 - (audioMult * 4.0); 
+            camera.lookAt(currentPos.x * 0.05, currentPos.y * 0.05, 0);
+
+            // Rotación universo (solo Y)
+            instancedMesh.rotation.y += (0.0003 + flowSpeed * 0.001);
+            instancedMesh.updateMatrixWorld();
+
+            localCameraPos.copy(camera.position);
+            instancedMesh.worldToLocal(localCameraPos);
+
+            material.opacity = 0.5 + (audioMult * 0.4);
+
+            // --- DEFORMACIÓN TECHNO DEL LOGO CENTRAL ---
+            if (centerImage.style.display === 'block') {
+                const scale = 1 + (smoothBass * PARAMS.audioSensitivity * 0.5);
+                
+                // Techno Wobble / Deform (Mids & Treble)
+                const skewX = (smoothTreble - 0.2) * 20 * PARAMS.audioSensitivity; 
+                const skewY = (smoothMids - 0.2) * 15 * PARAMS.audioSensitivity;
+                
+                centerImage.style.transform = `translate(-50%, -50%) perspective(600px) scale(${scale}) rotateX(${skewY}deg) rotateY(${skewX}deg)`;
+                
+                // Hue Shifting continuo + Glow Reactivo
+                const hue = (globalElapsedTime * 80) % 360; 
+                const glow = smoothBass * 40 * PARAMS.audioSensitivity;
+                centerImage.style.filter = `hue-rotate(${hue}deg) drop-shadow(0 0 ${glow}px var(--sgx-cyan))`;
             }
 
-            if (hubGroup.visible) {
-                floatingObjects.forEach((obj, index) => {
-                    obj.position.y = 1.1 + Math.sin(time * 0.002 + index) * 0.1;
-                });
-            }
+            // Loop Matemático de Partículas
+            for (let i = 0; i < PARAMS.count; i++) {
+                const idx = i * stride;
+                
+                pData[idx + 0] += pData[idx + 6] * pData[idx + 3] * moveDt; 
+                pData[idx + 1] += pData[idx + 7] * pData[idx + 3] * moveDt; 
+                pData[idx + 2] += pData[idx + 8] * pData[idx + 3] * moveDt; 
 
-            if (renderer.xr.isPresenting) {
-                document.getElementById('hud').style.display = 'none';
-                document.getElementById('watermark').style.display = 'none';
-                document.getElementById('ExitButton').style.display = 'none';
-                document.getElementById('ImmersionButton').style.display = 'none';
-                updateVRRaycasting();
-                handleLocomotion();
-            } else {
-                if(!document.body.classList.contains('ui-hidden')) {
-                    document.getElementById('hud').style.display = 'block';
-                    document.getElementById('watermark').style.display = 'block';
-                    if (currentMaqueta) {
-                        document.getElementById('ExitButton').style.display = 'block';
-                        if (!currentVideoElement) document.getElementById('ImmersionButton').style.display = 'block';
-                    }
+                // Lógica Warp
+                if (pData[idx + 0] > 120) pData[idx + 0] -= 240;
+                if (pData[idx + 0] < -120) pData[idx + 0] += 240;
+                if (pData[idx + 1] > 80) pData[idx + 1] -= 160;
+                if (pData[idx + 1] < -80) pData[idx + 1] += 160;
+                if (pData[idx + 2] > 60) pData[idx + 2] -= 160;
+                if (pData[idx + 2] < -100) pData[idx + 2] += 160;
+
+                let x = pData[idx + 0];
+                let y = pData[idx + 1];
+                let z = pData[idx + 2];
+                const seed = pData[idx + 4];
+                const colorScale = pData[idx + 5]; 
+
+                const dist = Math.sqrt(x*x + y*y + z*z);
+                if(dist > 0 && audioActive) {
+                    x += (x / dist) * audioMult * 2.0;
+                    y += (y / dist) * audioMult * 2.0;
+                    z += (z / dist) * audioMult * 2.0;
                 }
+
+                dummy.position.set(x, y, z);
+                
+                const s = PARAMS.pawScale * colorScale * (0.7 + 0.3 * Math.sin(seed + globalElapsedTime)) * (1.0 + audioMult * 0.8);
+                dummy.scale.set(s, s, s);
+
+                dummy.lookAt(localCameraPos);
+                
+                dummy.updateMatrix();
+                instancedMesh.setMatrixAt(i, dummy.matrix);
             }
 
+            instancedMesh.instanceMatrix.needsUpdate = true;
             renderer.render(scene, camera);
-        });
+
+            // Telemetría
+            frameCount++;
+            const now = performance.now();
+            if (now - lastTime >= 500) {
+                fpsDisplay.innerText = `${((frameCount * 1000) / (now - lastTime)).toFixed(1)}`;
+                frameCount = 0;
+                lastTime = now;
+            }
+        }
+
+        updateSystem();
     </script>
 </body>
 </html>
