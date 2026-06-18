@@ -3,23 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SGX Animus Core // Dejando Huellas Music Fest</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <title>Dejando Huellas // VJ Core</title>
+    <!-- Tipografías actualizadas para un look más empático e institucional pero moderno -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --sgx-black: #050505;
-            --sgx-blue: #32527B;
-            --sgx-gold: #FDCC0D;
-            --sgx-copper: #B87333;
-            --sgx-cyan: #00FFFF;
+            /* Paleta Oficial Dejando Huellas */
+            --dh-purple: #4B156E;
+            --dh-gold: #D4A373;
+            --dh-pink: #F7B0CC;
+            --dh-white: #FFFFFF;
+            
+            /* Fondos inmersivos basados en el morado vibrante oscurecido */
+            --dh-bg-deep: #0a0310;
         }
 
         body {
             margin: 0;
             overflow: hidden;
-            background-color: var(--sgx-black);
+            background-color: var(--dh-bg-deep);
             font-family: 'Roboto Mono', monospace;
-            color: #ffffff;
+            color: var(--dh-white);
             touch-action: none;
         }
 
@@ -29,7 +33,7 @@
             z-index: 5;
             pointer-events: none;
             object-fit: contain;
-            filter: drop-shadow(0 5px 15px rgba(0,0,0,0.5));
+            filter: drop-shadow(0 5px 15px rgba(75, 21, 110, 0.5)); /* Sombra morada */
         }
 
         #visual-center {
@@ -38,7 +42,6 @@
             transform: translate(-50%, -50%);
             max-width: 45vw;
             max-height: 45vh;
-            /* Transición fluida para absorber el jittering del FFT */
             transition: filter 0.1s ease-out, transform 0.05s linear; 
         }
 
@@ -48,7 +51,7 @@
             left: 30px;
             max-width: 15vw;
             max-height: 12vh;
-            display: block; /* Siempre visible */
+            display: block;
         }
 
         #visual-br {
@@ -56,36 +59,36 @@
             right: 30px;
             max-width: 15vw;
             max-height: 12vh;
-            display: block; /* Siempre visible */
+            display: block;
         }
 
-        /* --- SGX WATERMARK (CENTRO INFERIOR) --- */
+        /* --- WATERMARK (CENTRO INFERIOR) --- */
         #sgx-watermark {
             position: absolute;
             bottom: 25px;
             left: 50%;
             transform: translateX(-50%);
             z-index: 10;
-            font-family: 'Orbitron', sans-serif;
-            font-weight: 400; /* Fino */
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 400; 
             font-size: clamp(0.7rem, 1vw, 0.9rem);
-            color: #ffffff;
+            color: var(--dh-white);
             letter-spacing: 6px;
             text-transform: uppercase;
-            text-shadow: 0 0 5px var(--sgx-cyan), 0 0 15px var(--sgx-cyan); /* Glow doble */
+            text-shadow: 0 0 5px var(--dh-pink), 0 0 15px var(--dh-pink); /* Glow en Rosa Pastel */
             pointer-events: none;
             text-align: center;
             opacity: 1;
             transition: opacity 0.5s ease;
         }
 
-        /* Mensaje extra en modo cinemático */
         .restore-hint {
             display: block;
             font-size: 0.5em;
             opacity: 0;
             margin-top: 5px;
             letter-spacing: 3px;
+            color: var(--dh-gold);
             transition: opacity 0.5s ease;
         }
 
@@ -103,96 +106,101 @@
             transition: opacity 0.5s ease;
         }
 
-        .sgx-panel {
-            background: rgba(5, 5, 5, 0.6);
+        .dh-panel {
+            background: rgba(10, 3, 16, 0.65); /* Morado extra oscuro */
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(50, 82, 123, 0.4);
-            border-left: 3px solid var(--sgx-gold);
+            border: 1px solid rgba(247, 176, 204, 0.3); /* Borde rosa sutil */
+            border-left: 4px solid var(--dh-gold); /* Acento Café Arena */
             padding: 15px 20px;
-            clip-path: polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+            border-radius: 8px; /* Bordes más amigables (ya no 45 deg) por el tema de mascotas */
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(75, 21, 110, 0.4);
         }
 
-        .sgx-title {
-            font-family: 'Orbitron', sans-serif;
+        .dh-title {
+            font-family: 'Montserrat', sans-serif;
             font-size: clamp(1rem, 1.5vw, 1.4rem);
             font-weight: 900;
-            color: var(--sgx-cyan);
+            color: var(--dh-pink);
             margin: 0 0 5px 0;
             text-transform: uppercase;
             letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(247, 176, 204, 0.5);
         }
 
-        .sgx-telemetry {
+        .dh-telemetry {
             display: flex;
             gap: 20px;
             font-size: 0.75rem;
-            color: #a0aec0;
+            color: #e2e8f0;
             border-top: 1px solid rgba(255, 255, 255, 0.1);
             padding-top: 10px;
             margin-bottom: 10px;
         }
 
         .metric { display: flex; flex-direction: column; }
-        .metric-value { color: #ffffff; font-weight: 700; font-size: 1rem; }
+        .metric-value { color: var(--dh-white); font-weight: 700; font-size: 1rem; text-shadow: 0 0 5px var(--dh-gold); }
 
         /* --- BOTONES --- */
         #audio-btn {
-            background: rgba(253, 204, 13, 0.1);
-            color: var(--sgx-gold);
-            border: 1px solid var(--sgx-gold);
+            background: rgba(212, 163, 115, 0.1);
+            color: var(--dh-gold);
+            border: 1px solid var(--dh-gold);
             padding: 10px 15px;
-            font-family: 'Orbitron', sans-serif;
+            font-family: 'Montserrat', sans-serif;
             font-weight: 700;
             font-size: 0.8rem;
             cursor: pointer;
-            clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+            border-radius: 6px;
             transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
-        #audio-btn:hover { background: var(--sgx-gold); color: var(--sgx-black); }
+        #audio-btn:hover { background: var(--dh-gold); color: var(--dh-purple); box-shadow: 0 0 15px var(--dh-gold); }
 
         .upload-section {
             display: flex;
             flex-direction: column;
             gap: 5px;
             margin-top: 10px;
-            border-top: 1px solid rgba(50, 82, 123, 0.4);
+            border-top: 1px solid rgba(247, 176, 204, 0.3);
             padding-top: 10px;
         }
 
         .upload-btn {
             background: transparent;
-            color: #e2e8f0;
-            border: 1px solid rgba(50, 82, 123, 0.8);
+            color: var(--dh-white);
+            border: 1px solid rgba(212, 163, 115, 0.5);
             font-family: 'Roboto Mono', monospace;
             font-size: 0.65rem;
-            padding: 6px 10px;
+            padding: 8px 10px;
             cursor: pointer;
+            border-radius: 4px;
             transition: 0.2s;
             text-align: left;
             display: flex;
             justify-content: space-between;
         }
-        .upload-btn:hover { background: var(--sgx-blue); color: white; }
-        .upload-btn span { color: var(--sgx-cyan); }
+        .upload-btn:hover { background: var(--dh-gold); color: var(--dh-purple); font-weight: bold; }
+        .upload-btn span { color: var(--dh-pink); }
 
         #btn-cinematic {
             position: absolute;
             top: 20px;
             right: 20px;
             z-index: 30;
-            background: rgba(5, 5, 5, 0.5);
-            border: 1px solid var(--sgx-blue);
-            color: var(--sgx-cyan);
+            background: rgba(75, 21, 110, 0.5);
+            border: 1px solid var(--dh-pink);
+            color: var(--dh-white);
             padding: 10px;
-            border-radius: 5px;
+            border-radius: 50%;
             cursor: pointer;
             font-size: 1.2rem;
             backdrop-filter: blur(5px);
             transition: all 0.3s ease;
+            box-shadow: 0 0 10px rgba(247, 176, 204, 0.3);
         }
-        #btn-cinematic:hover { background: var(--sgx-blue); color: #fff; }
+        #btn-cinematic:hover { background: var(--dh-pink); color: var(--dh-purple); transform: scale(1.1); }
 
         #cinematic-restore {
             position: absolute;
@@ -201,31 +209,31 @@
             pointer-events: none;
         }
 
-        /* --- OVERRIDE LIL-GUI --- */
+        /* --- OVERRIDE LIL-GUI CON LA PALETA DE LA MARCA --- */
         .lil-gui { 
-            --background-color: rgba(5, 5, 5, 0.7);
-            --text-color: #e2e8f0;
-            --title-background-color: #32527B;
-            --widget-color: #1a1a1a;
-            --hover-color: #32527B;
-            --focus-color: #FDCC0D;
+            --background-color: rgba(75, 21, 110, 0.85); /* Morado Vibrante */
+            --text-color: #ffffff;
+            --title-background-color: #4B156E;
+            --widget-color: rgba(212, 163, 115, 0.3); /* Café Arena oscuro */
+            --hover-color: rgba(212, 163, 115, 0.6);
+            --focus-color: #F7B0CC; /* Rosa Pastel */
             font-family: 'Roboto Mono', monospace;
-            border: 1px solid var(--sgx-blue);
+            border: 1px solid var(--dh-pink);
             right: 20px !important;
             top: 70px !important;
-            border-radius: 0 !important;
+            border-radius: 8px !important;
             transition: opacity 0.5s ease;
             z-index: 20;
         }
+        .lil-gui .title { font-family: 'Montserrat', sans-serif; font-weight: bold; letter-spacing: 1px; }
         
-        #audio-meter { width: 100%; height: 3px; background: rgba(255,255,255,0.1); margin-top: 5px; }
-        #audio-level { height: 100%; width: 0%; background: var(--sgx-cyan); transition: width 0.1s; }
+        #audio-meter { width: 100%; height: 4px; background: rgba(255,255,255,0.1); margin-top: 5px; border-radius: 2px; }
+        #audio-level { height: 100%; width: 0%; background: var(--dh-gold); transition: width 0.1s; border-radius: 2px; box-shadow: 0 0 8px var(--dh-gold); }
     </style>
 </head>
 <body>
 
     <!-- OVERLAYS DE IMÁGENES -->
-    <!-- Logo Central Dinámico (Audio React) -->
     <img id="visual-center" class="visual-overlay" style="display:none;" alt="Center Visual">
     
     <!-- Auspiciadores Fijos -->
@@ -242,16 +250,16 @@
     <div id="cinematic-restore"></div>
 
     <div id="hud-container">
-        <button id="audio-btn">🎤 INIT SENSOR ACÚSTICO</button>
-        <div class="sgx-panel">
-            <h1 class="sgx-title">DEJANDO HUELLAS FEST</h1>
-            <div class="sgx-telemetry">
+        <button id="audio-btn">🎤 SENSOR ACÚSTICO</button>
+        <div class="dh-panel">
+            <h1 class="dh-title">DEJANDO HUELLAS FEST</h1>
+            <div class="dh-telemetry">
                 <div class="metric">
-                    <span>ENTIDADES</span>
+                    <span>HUELLAS</span>
                     <span class="metric-value" id="count-display">8,000</span>
                 </div>
                 <div class="metric">
-                    <span>FPS</span>
+                    <span>RESONANCIA</span>
                     <span class="metric-value" id="fps-display">00.0</span>
                 </div>
             </div>
@@ -259,7 +267,7 @@
 
             <!-- ASSETS INJECTOR (Solo Central) -->
             <div class="upload-section">
-                <span style="font-size: 0.6rem; color: var(--sgx-gold); letter-spacing: 1px;">// VJ ASSETS INJECTOR</span>
+                <span style="font-size: 0.65rem; color: var(--dh-white); letter-spacing: 1px; font-family: 'Montserrat', sans-serif;">// VJ ASSETS INJECTOR</span>
                 <button class="upload-btn" onclick="document.getElementById('file-center').click()">LOGO CENTRAL (AUDIO-REACT) <span>[+]</span></button>
             </div>
             <input type="file" id="file-center" accept="image/*" style="display:none;">
@@ -273,7 +281,7 @@
         // Global Error Catcher
         window.onerror = function(msg, url, lineNo) {
             const errDiv = document.createElement('div');
-            errDiv.style.color = '#ff0055'; errDiv.style.fontSize = '10px'; errDiv.style.fontFamily = 'monospace';
+            errDiv.style.color = '#F7B0CC'; errDiv.style.fontSize = '10px'; errDiv.style.fontFamily = 'monospace';
             errDiv.innerText = `[SYS_ERROR]: ${msg}`;
             document.getElementById('hud-container').appendChild(errDiv);
             return false;
@@ -301,7 +309,7 @@
             hudContainer.style.opacity = '0'; hudContainer.style.pointerEvents = 'none';
             btnCinematic.style.opacity = '0'; btnCinematic.style.pointerEvents = 'none';
             if(window.sgxGui) { window.sgxGui.domElement.style.opacity = '0'; window.sgxGui.domElement.style.pointerEvents = 'none'; }
-            restoreHint.style.opacity = '0.5';
+            restoreHint.style.opacity = '0.8';
             cinematicRestore.style.pointerEvents = 'auto'; 
         });
 
@@ -318,7 +326,8 @@
 
         // --- 2. CORE ARCHITECTURE SETUP ---
         const scene = new THREE.Scene();
-        scene.fog = new THREE.FogExp2(0x050505, 0.012);
+        // Neblina con el color "Morado Vibrante" extremadamente oscurecido
+        scene.fog = new THREE.FogExp2(0x0a0310, 0.012);
 
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
         camera.position.set(0, 0, 40); 
@@ -326,19 +335,19 @@
         const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.setClearColor(0x050505);
+        // Fondo base utilizando una variante muy oscura del Morado Vibrante para mantener el contraste
+        renderer.setClearColor(0x0a0310);
         document.body.appendChild(renderer.domElement);
 
-        // --- 3. HARDWARE TEXTURE LOADER (CERO CORS ERROR) ---
-        // Como tu nueva imagen ya es transparente, usamos el loader nativo sin el hackeo GLSL
+        // --- 3. HARDWARE TEXTURE LOADER ---
         const loader = new THREE.TextureLoader();
         loader.setCrossOrigin('anonymous');
         const cacheBuster = "?v=" + Date.now();
-        // PNG de la Huella Sin Background
+        // Huella base sin background
         const pawUrl = "https://static.wixstatic.com/media/fe81a7_15bf73d9cc0246549b2d9dbb41dc130b~mv2.png" + cacheBuster;
         const particleTex = loader.load(pawUrl);
 
-        // Material Limpio y Optimizado (Usa Additive Blending para brillar)
+        // Material Additive Blending para efecto luminoso
         const material = new THREE.MeshBasicMaterial({
             color: 0xffffff,
             map: particleTex, 
@@ -349,7 +358,7 @@
             side: THREE.DoubleSide
         });
 
-        // --- 4. DATA STRUCTURE ---
+        // --- 4. DATA STRUCTURE & BRAND COLORS ---
         const PARAMS = {
             count: 8000, 
             baseEnergy: 0.3,      
@@ -360,15 +369,16 @@
             autoPilot: true
         };
 
-        const SGX_COLORS = [
-            new THREE.Color(0x32527B), // Azul 
-            new THREE.Color(0xFDCC0D), // Oro 
-            new THREE.Color(0xB87333), // Cobre 
-            new THREE.Color(0x00FFFF)  // Cyan
+        // INTEGRACIÓN DE LA PALETA "DEJANDO HUELLAS"
+        const BRAND_COLORS = [
+            new THREE.Color(0x4B156E), // Morado Vibrante
+            new THREE.Color(0xD4A373), // Café Arena / Dorado Suave
+            new THREE.Color(0xF7B0CC), // Rosa Pastel
+            new THREE.Color(0xFFFFFF)  // Blanco Puro
         ];
 
-        // Mapeo Estricto de Tamaños
-        const COLOR_SCALES = [0.6, 1.8, 1.3, 1.0];
+        // Escalas adaptadas al peso visual (Morado más profundo, Oro más grande, Rosa intermedio, Blanco pequeño/brillante)
+        const COLOR_SCALES = [1.2, 1.8, 1.0, 0.6];
 
         const geometry = new THREE.PlaneGeometry(0.5, 0.5); 
         const instancedMesh = new THREE.InstancedMesh(geometry, material, PARAMS.count);
@@ -388,15 +398,17 @@
             pData[idx + 3] = (Math.random() * 0.5 + 0.1);  
             pData[idx + 4] = Math.random() * 100;          
 
-            const cIdx = Math.floor(Math.random() * SGX_COLORS.length);
+            // Asignación de colores de la marca
+            const cIdx = Math.floor(Math.random() * BRAND_COLORS.length);
             pData[idx + 5] = COLOR_SCALES[cIdx];           
             
             pData[idx + 6] = (Math.random() - 0.5) * 5.0;  
             pData[idx + 7] = (Math.random() - 0.5) * 2.0;  
             pData[idx + 8] = (Math.random() - 0.5) * 5.0;  
 
-            color.copy(SGX_COLORS[cIdx]);
-            if(Math.random() > 0.7) color.lerp(new THREE.Color(0xffffff), 0.5); 
+            color.copy(BRAND_COLORS[cIdx]);
+            // Mezclamos un poco de blanco para mejorar el brillo (Additive Blending funciona mejor con lumas altos)
+            if(Math.random() > 0.6) color.lerp(new THREE.Color(0xffffff), 0.3); 
             instancedMesh.setColorAt(i, color);
         }
         instancedMesh.instanceColor.needsUpdate = true;
@@ -419,8 +431,8 @@
                 audioActive = true;
                 const btn = document.getElementById('audio-btn');
                 btn.innerText = "⚡ SENSOR ACTIVO";
-                btn.style.background = "var(--sgx-cyan)";
-                btn.style.color = "var(--sgx-black)";
+                btn.style.background = "var(--dh-gold)";
+                btn.style.color = "var(--dh-purple)";
                 setTimeout(() => btn.style.display = 'none', 1500);
 
                 if (audioCtx.state === 'suspended') await audioCtx.resume();
@@ -474,8 +486,8 @@
 
         // --- 7. TACTICAL GUI ---
         try {
-            window.sgxGui = new GUI({ title: 'CONTROL VJ' });
-            window.sgxGui.add(PARAMS, 'audioSensitivity', 0.1, 3.0).name('Sensibilidad Audio');
+            window.sgxGui = new GUI({ title: 'CONTROL DINÁMICO' });
+            window.sgxGui.add(PARAMS, 'audioSensitivity', 0.1, 3.0).name('Reactividad Musical');
             window.sgxGui.add(PARAMS, 'baseEnergy', 0.05, 1.0).name('Energía Base');
             window.sgxGui.add(PARAMS, 'swarmVelocity', 0.0, 3.0).name('Velocidad Estelar');
             window.sgxGui.add(PARAMS, 'pawScale', 0.1, 3.0).name('Tamaño Huellas');
@@ -505,7 +517,7 @@
                 targetPos.y = Math.cos(globalElapsedTime * 0.08) * 5;
             }
 
-            // Parallax
+            // Parallax Suave
             currentPos.x += (targetPos.x - currentPos.x) * PARAMS.parallaxWarp;
             currentPos.y += (targetPos.y - currentPos.y) * PARAMS.parallaxWarp;
 
@@ -514,29 +526,28 @@
             camera.position.z = 40 - (audioMult * 4.0); 
             camera.lookAt(currentPos.x * 0.05, currentPos.y * 0.05, 0);
 
-            // Rotación universo (solo Y)
+            // Rotación universo
             instancedMesh.rotation.y += (0.0003 + flowSpeed * 0.001);
             instancedMesh.updateMatrixWorld();
 
             localCameraPos.copy(camera.position);
             instancedMesh.worldToLocal(localCameraPos);
 
+            // Resplandor de material pulsa suavemente
             material.opacity = 0.5 + (audioMult * 0.4);
 
-            // --- DEFORMACIÓN TECHNO DEL LOGO CENTRAL ---
+            // --- DEFORMACIÓN TECHNO DEL LOGO CENTRAL (Branding Mode) ---
             if (centerImage.style.display === 'block') {
-                const scale = 1 + (smoothBass * PARAMS.audioSensitivity * 0.5);
-                
-                // Techno Wobble / Deform (Mids & Treble)
-                const skewX = (smoothTreble - 0.2) * 20 * PARAMS.audioSensitivity; 
-                const skewY = (smoothMids - 0.2) * 15 * PARAMS.audioSensitivity;
+                const scale = 1 + (smoothBass * PARAMS.audioSensitivity * 0.4);
+                const skewX = (smoothTreble - 0.2) * 15 * PARAMS.audioSensitivity; 
+                const skewY = (smoothMids - 0.2) * 10 * PARAMS.audioSensitivity;
                 
                 centerImage.style.transform = `translate(-50%, -50%) perspective(600px) scale(${scale}) rotateX(${skewY}deg) rotateY(${skewX}deg)`;
                 
-                // Hue Shifting continuo + Glow Reactivo
-                const hue = (globalElapsedTime * 80) % 360; 
-                const glow = smoothBass * 40 * PARAMS.audioSensitivity;
-                centerImage.style.filter = `hue-rotate(${hue}deg) drop-shadow(0 0 ${glow}px var(--sgx-cyan))`;
+                // Efecto de brillo reacciona al bajo, utilizando el Rosa Pastel o Café Arena como resplandor
+                const glow = smoothBass * 35 * PARAMS.audioSensitivity;
+                const hue = (globalElapsedTime * 40) % 360; // Desplazamiento sutil de tono
+                centerImage.style.filter = `hue-rotate(${hue}deg) drop-shadow(0 0 ${glow}px var(--dh-pink))`;
             }
 
             // Loop Matemático de Partículas
@@ -547,7 +558,7 @@
                 pData[idx + 1] += pData[idx + 7] * pData[idx + 3] * moveDt; 
                 pData[idx + 2] += pData[idx + 8] * pData[idx + 3] * moveDt; 
 
-                // Lógica Warp
+                // Lógica Warp (Teletransporte en los bordes)
                 if (pData[idx + 0] > 120) pData[idx + 0] -= 240;
                 if (pData[idx + 0] < -120) pData[idx + 0] += 240;
                 if (pData[idx + 1] > 80) pData[idx + 1] -= 160;
